@@ -619,7 +619,7 @@
       <h1>학급별 주간 시간표</h1>
       <section class="usage-guide" aria-label="사용 방법 안내">
         <ol>
-          <li>반 개수와 최대 교시를 먼저 정하고, 전담 과목에서 필요한 과목(없으면 A~F/강사1~3)을 체크하세요.</li>
+          <li>반 개수와 최대 교시를 먼저 정하고, 전담 과목에서 필요한 과목을 체크하세요.</li>
           <li>자동 생성 전에는 체육을 먼저 배치하고, 마지막 교시 X 설정으로 요일별 마지막 교시 사용 여부를 정하세요.</li>
           <li>학급 시간표 칸에 과목을 직접 입력하거나, 전담 시간표 칸에 반 번호를 입력해도 같은 위치에 서로 연동됩니다.</li>
           <li>자동 생성은 설정한 시수대로 전담 과목을 배치하며, 다시 실행해도 수동 확정값/체육/X 설정은 유지됩니다.</li>
@@ -724,25 +724,50 @@
 
     <script>
       const days = ["월", "화", "수", "목", "금"];
-      const specialistSubjects = [
-        { name: "영어", color: "#fde68a" },
-        { name: "도덕", color: "#fbcfe8" },
-        { name: "과학", color: "#bfdbfe" },
-        { name: "미술", color: "#fecaca" },
-        { name: "음악", color: "#ddd6fe" },
-        { name: "실과", color: "#fed7aa" },
-        { name: "강사1", color: "#a7f3d0" },
-        { name: "강사2", color: "#fdba74" },
-        { name: "강사3", color: "#f0abfc" },
-        { name: "A", color: "#f9a8d4" },
-        { name: "B", color: "#fcd34d" },
-        { name: "C", color: "#93c5fd" },
-        { name: "D", color: "#86efac" },
-        { name: "E", color: "#c4b5fd" },
-        { name: "F", color: "#fca5a5" },
-        { name: "자율", color: "#fde68a" },
-        { name: "창체", color: "#bfdbfe" }
+      const specialistSubjectNames = [
+        "국어",
+        "영어",
+        "수학",
+        "사회",
+        "과학",
+        "음악",
+        "미술",
+        "체육",
+        "실과",
+        "도덕",
+        "통합",
+        "창체",
+        "자율",
+        "동아리",
+        "강사1",
+        "강사2",
+        "과목1",
+        "과목2"
       ];
+      const specialistSubjectColors = [
+        "#fde68a",
+        "#fbcfe8",
+        "#bfdbfe",
+        "#fecaca",
+        "#ddd6fe",
+        "#fed7aa",
+        "#a7f3d0",
+        "#fdba74",
+        "#f0abfc",
+        "#93c5fd",
+        "#86efac",
+        "#c4b5fd",
+        "#fca5a5",
+        "#f9a8d4",
+        "#fcd34d",
+        "#99f6e4",
+        "#bae6fd",
+        "#fecdd3"
+      ];
+      const specialistSubjects = specialistSubjectNames.map((name, index) => ({
+        name,
+        color: specialistSubjectColors[index % specialistSubjectColors.length]
+      }));
 
       const classCountSelect = document.getElementById("classCountSelect");
       const periodCountSelect = document.getElementById("periodCountSelect");
@@ -777,7 +802,7 @@
       const specialistAvailableSlots = {};
       const peAvailableSlots = {};
       const specialistExcludedSlots = new Set();
-      const allSpecialistSubjectNames = new Set(["체육", ...specialistSubjects.map((subject) => subject.name)]);
+      const allSpecialistSubjectNames = new Set(specialistSubjects.map((subject) => subject.name));
       const specialistColorMap = Object.fromEntries(
         specialistSubjects.map((subject) => [subject.name, subject.color])
       );
@@ -965,7 +990,7 @@
       }
 
       function openAutoGenerateModal() {
-        const subjects = ["체육", ...Array.from(selectedSpecialists)];
+        const subjects = Array.from(selectedSpecialists);
         autoGenerateRows.innerHTML = "";
 
         subjects.forEach((subject) => {
@@ -1113,13 +1138,7 @@
       }
 
       function getSpecialistTableNames() {
-        const names = ["체육"];
-        selectedSpecialists.forEach((subject) => {
-          if (subject !== "체육") {
-            names.push(subject);
-          }
-        });
-        return names;
+        return Array.from(selectedSpecialists);
       }
 
       function getEntryTableName(entry) {
@@ -1269,6 +1288,11 @@
               td.addEventListener("keydown", (event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
+                  const openedMenu = td.querySelector(".class-select-menu");
+                  if (openedMenu && event.key === "Enter" && tableName !== "체육") {
+                    toggleSpecialistAvailabilitySlot(tableName, day, period);
+                    return;
+                  }
                   editSpecialistCell(td, tableName, day, period);
                 }
               });
@@ -1520,6 +1544,10 @@
           if (pePlace === "운동장") return peAvailability.ground;
           return peAvailability.gym || peAvailability.ground;
         }
+        const hasAnyAvailability = Object.keys(specialistAvailableSlots).some((key) =>
+          key.startsWith(`${subject}__`)
+        );
+        if (!hasAnyAvailability) return true;
         return Boolean(specialistAvailableSlots[getSpecialistSlotKey(subject, day, period)]);
       }
 
@@ -1840,8 +1868,13 @@
               const nextSubject = value.trim();
               if (!nextSubject) {
                 delete subjectStore[key];
-                specialistExcludedSlots.add(key);
-                cell.textContent = "전담제외";
+                if (specialistExcludedSlots.has(key)) {
+                  specialistExcludedSlots.delete(key);
+                  cell.textContent = "";
+                } else {
+                  specialistExcludedSlots.add(key);
+                  cell.textContent = "전담제외";
+                }
                 applySpecialistSlotColors();
                 renderSpecialistTimetables();
                 return;
@@ -1929,15 +1962,6 @@
           return;
         }
 
-        if (selectedValue === "O") {
-          backup.forEach((item) => {
-            delete subjectStore[item.key];
-          });
-          specialistAvailableSlots[slotKey] = true;
-          renderTimetables();
-          return;
-        }
-
         const className = `${selectedValue}반`;
         let nextEntry = { subject: tableName };
         if (tableName === "체육") {
@@ -1964,6 +1988,20 @@
           return;
         }
 
+        renderTimetables();
+      }
+
+      function toggleSpecialistAvailabilitySlot(tableName, day, period) {
+        const slotKey = getSpecialistSlotKey(tableName, day, period);
+        const existingAssignments = getSpecialistAssignmentsAtSlot(tableName, day, period);
+        existingAssignments.forEach((item) => {
+          delete subjectStore[getCellKey(item.className, day, period)];
+        });
+        if (specialistAvailableSlots[slotKey]) {
+          delete specialistAvailableSlots[slotKey];
+        } else {
+          specialistAvailableSlots[slotKey] = true;
+        }
         renderTimetables();
       }
 
@@ -1998,16 +2036,6 @@
             await onSelect("");
           });
           menu.appendChild(clearButton);
-
-          const openSlotButton = document.createElement("button");
-          openSlotButton.type = "button";
-          openSlotButton.className = "class-select-option";
-          openSlotButton.textContent = "O (가능 시간)";
-          openSlotButton.addEventListener("click", async (event) => {
-            event.stopPropagation();
-            await onSelect("O");
-          });
-          menu.appendChild(openSlotButton);
 
           for (let number = 1; number <= classCount; number += 1) {
             const option = document.createElement("button");
@@ -2069,6 +2097,16 @@
         }
 
         cell.appendChild(menu);
+        if (tableName !== "체육") {
+          menu.setAttribute("tabindex", "0");
+          menu.focus();
+          menu.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            event.stopPropagation();
+            toggleSpecialistAvailabilitySlot(tableName, day, period);
+          });
+        }
       }
 
       function renderSpecialistOptions() {
