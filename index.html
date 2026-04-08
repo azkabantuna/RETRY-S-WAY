@@ -346,7 +346,7 @@
 
       .auto-row {
         display: grid;
-        grid-template-columns: 1fr 96px 150px;
+        grid-template-columns: 1fr 90px 80px 120px 80px;
         align-items: center;
         gap: 10px;
         margin-bottom: 8px;
@@ -595,6 +595,12 @@
         cursor: not-allowed !important;
       }
 
+      .auto-excluded-slot {
+        background: #fff7ed !important;
+        color: #b45309 !important;
+        font-weight: 700 !important;
+      }
+
       @media (max-width: 1400px) {
         .timetable-grid {
           grid-template-columns: repeat(3, minmax(220px, 1fr));
@@ -724,7 +730,6 @@
         { name: "과학", color: "#bfdbfe" },
         { name: "미술", color: "#fecaca" },
         { name: "음악", color: "#ddd6fe" },
-        { name: "체육", color: "#bbf7d0" },
         { name: "실과", color: "#fed7aa" },
         { name: "강사1", color: "#a7f3d0" },
         { name: "강사2", color: "#fdba74" },
@@ -734,7 +739,9 @@
         { name: "C", color: "#93c5fd" },
         { name: "D", color: "#86efac" },
         { name: "E", color: "#c4b5fd" },
-        { name: "F", color: "#fca5a5" }
+        { name: "F", color: "#fca5a5" },
+        { name: "자율", color: "#fde68a" },
+        { name: "창체", color: "#bfdbfe" }
       ];
 
       const classCountSelect = document.getElementById("classCountSelect");
@@ -764,8 +771,13 @@
       const selectedSpecialists = new Set();
       const disabledLastPeriodDays = new Set();
       const autoGenerateSubjectCounts = {};
+      const autoGenerateSubjectTypes = {};
+      const autoGenerateSubjectSeries = {};
       const subjectTeacherAssignments = {};
-      const allSpecialistSubjectNames = new Set(specialistSubjects.map((subject) => subject.name));
+      const specialistAvailableSlots = {};
+      const peAvailableSlots = {};
+      const specialistExcludedSlots = new Set();
+      const allSpecialistSubjectNames = new Set(["체육", ...specialistSubjects.map((subject) => subject.name)]);
       const specialistColorMap = Object.fromEntries(
         specialistSubjects.map((subject) => [subject.name, subject.color])
       );
@@ -783,6 +795,8 @@
         Array.from({ length: count }, (_, index) => `${index + 1}교시`);
 
       const getCellKey = (className, day, period) => `${className}__${day}__${period}`;
+      const getSpecialistSlotKey = (subject, day, period) => `${subject}__${day}__${period}`;
+      const getPeSlotKey = (day, period) => `${day}__${period}`;
 
       function fillSelectOptions(selectElement, start, end, defaultValue) {
         for (let value = start; value <= end; value += 1) {
@@ -806,6 +820,28 @@
 
       function getAssignedTeacher(subject) {
         return subjectTeacherAssignments[subject] || "";
+      }
+
+      function getSeriesSize(subject) {
+        const value = Number(autoGenerateSubjectSeries[subject] ?? 1);
+        return Number.isFinite(value) && value >= 1 ? Math.min(5, Math.floor(value)) : 1;
+      }
+
+      function getPeAvailability(day, period) {
+        return peAvailableSlots[getPeSlotKey(day, period)] || { gym: false, ground: false };
+      }
+
+      function setPeAvailability(day, period, nextState) {
+        const key = getPeSlotKey(day, period);
+        const normalized = {
+          gym: Boolean(nextState?.gym),
+          ground: Boolean(nextState?.ground)
+        };
+        if (!normalized.gym && !normalized.ground) {
+          delete peAvailableSlots[key];
+        } else {
+          peAvailableSlots[key] = normalized;
+        }
       }
 
       function getEntryColor(entry) {
@@ -876,10 +912,6 @@
         }
       }
 
-      function hasAnyPeAssigned() {
-        return Object.values(subjectStore).some((entry) => entry?.subject === "체육");
-      }
-
       function isDisabledSlot(day, period) {
         return period === maxPeriodCount && disabledLastPeriodDays.has(day);
       }
@@ -933,7 +965,7 @@
       }
 
       function openAutoGenerateModal() {
-        const subjects = Array.from(selectedSpecialists);
+        const subjects = ["체육", ...Array.from(selectedSpecialists)];
         autoGenerateRows.innerHTML = "";
 
         subjects.forEach((subject) => {
@@ -942,6 +974,30 @@
 
           const label = document.createElement("label");
           label.textContent = subject;
+
+          const typeField = document.createElement("div");
+          typeField.className = "auto-field";
+          const typeTitle = document.createElement("span");
+          typeTitle.className = "auto-field-title";
+          typeTitle.textContent = "구분";
+          const typeSelect = document.createElement("select");
+          typeSelect.dataset.subjectType = subject;
+          [
+            { value: "specialist", text: "전담" },
+            { value: "general", text: "일반" }
+          ].forEach((item) => {
+            const option = document.createElement("option");
+            option.value = item.value;
+            option.textContent = item.text;
+            typeSelect.appendChild(option);
+          });
+          const defaultType = subject === "자율" || subject === "창체" ? "general" : "specialist";
+          typeSelect.value = autoGenerateSubjectTypes[subject] || defaultType;
+          autoGenerateSubjectTypes[subject] = typeSelect.value;
+          typeSelect.addEventListener("change", () => {
+            autoGenerateSubjectTypes[subject] = typeSelect.value;
+          });
+          typeField.append(typeTitle, typeSelect);
 
           const hourField = document.createElement("div");
           hourField.className = "auto-field";
@@ -996,7 +1052,26 @@
           teacherPicker.append(teacherToggle, teacherMenu);
           teacherField.append(teacherTitle, teacherPicker);
 
-          row.append(label, hourField, teacherField);
+          const seriesField = document.createElement("div");
+          seriesField.className = "auto-field";
+          const seriesTitle = document.createElement("span");
+          seriesTitle.className = "auto-field-title";
+          seriesTitle.textContent = "연차시";
+          const seriesSelect = document.createElement("select");
+          seriesSelect.dataset.subjectSeries = subject;
+          for (let series = 1; series <= 5; series += 1) {
+            const option = document.createElement("option");
+            option.value = String(series);
+            option.textContent = `${series}`;
+            seriesSelect.appendChild(option);
+          }
+          seriesSelect.value = String(getSeriesSize(subject));
+          seriesSelect.addEventListener("change", () => {
+            autoGenerateSubjectSeries[subject] = Number(seriesSelect.value) || 1;
+          });
+          seriesField.append(seriesTitle, seriesSelect);
+
+          row.append(label, typeField, hourField, teacherField, seriesField);
           autoGenerateRows.appendChild(row);
         });
 
@@ -1135,25 +1210,26 @@
               td.style.textDecoration = "none";
 
               if (tableName === "체육") {
-                if (matchedEntries.length === 1) {
-                  const entry = matchedEntries[0];
-                  if (entry.pePlace === "강당") {
-                    td.style.background = pePlaceColorMap["강당"];
-                  } else if (entry.pePlace === "운동장") {
-                    td.style.background = pePlaceColorMap["운동장"];
-                  }
-                  td.textContent = entry.classNumber;
-                } else if (matchedEntries.length > 1) {
-                  const ordered = ["강당", "운동장"]
-                    .map((place) => matchedEntries.find((entry) => entry.pePlace === place))
-                    .filter(Boolean);
-                  const colors = ordered.map((entry) => pePlaceColorMap[entry.pePlace]).filter(Boolean);
+                const peAvailability = getPeAvailability(day, period);
+                const peLabels = [];
+                const colors = [];
+                if (peAvailability.gym) {
+                  peLabels.push("강당 O");
+                  colors.push(pePlaceColorMap["강당"]);
+                }
+                if (peAvailability.ground) {
+                  peLabels.push("운동장 O");
+                  colors.push(pePlaceColorMap["운동장"]);
+                }
+                if (colors.length > 1) {
                   td.style.backgroundImage = buildMultiColorGradient(colors);
-                  td.textContent = ordered.map((entry) => entry.classNumber).join(" / ");
+                } else if (colors.length === 1) {
+                  td.style.background = colors[0];
+                  td.style.backgroundImage = "";
                 } else {
                   td.style.backgroundImage = "";
-                  td.textContent = "";
                 }
+                td.textContent = peLabels.join(" / ");
               } else {
                 td.style.backgroundImage = "";
                 td.textContent = matchedEntries[0]?.classNumber || "";
@@ -1161,6 +1237,15 @@
                 if (matchedEntries.length && matchedEntries[0].source !== "auto") {
                   td.style.textDecoration = "underline";
                 }
+              }
+
+              if (
+                tableName !== "체육" &&
+                !td.textContent &&
+                specialistAvailableSlots[getSpecialistSlotKey(tableName, day, period)]
+              ) {
+                td.textContent = "O";
+                td.style.background = "#dbeafe";
               }
 
               if (!td.textContent) {
@@ -1230,6 +1315,7 @@
           const day = cell.dataset.day;
           const period = Number(cell.dataset.period);
           const disabled = isDisabledSlot(day, period);
+          const slotKey = getCellKey(className, day, period);
 
           if (disabled) {
             clearRestrictionHints(cell);
@@ -1248,6 +1334,7 @@
           clearRestrictionHints(cell);
 
           if (entry && entry.subject) {
+            cell.classList.remove("auto-excluded-slot");
             const manualEntry = (entry.source || "manual") !== "auto";
             const underline = manualEntry && entry.subject !== "체육";
             cell.style.textDecoration = underline ? "underline" : "none";
@@ -1260,6 +1347,15 @@
             }
             return;
           }
+
+          if (specialistExcludedSlots.has(slotKey)) {
+            cell.classList.add("auto-excluded-slot");
+            cell.textContent = "전담제외";
+            cell.style.backgroundImage = "";
+            cell.style.textDecoration = "none";
+            return;
+          }
+          cell.classList.remove("auto-excluded-slot");
 
           if (slotColors.length > 1) {
             cell.style.backgroundImage = buildMultiColorGradient(slotColors);
@@ -1348,6 +1444,7 @@
             return false;
           }
         }
+        specialistExcludedSlots.delete(key);
         subjectStore[key] = { ...nextEntry, source };
         return true;
       }
@@ -1416,28 +1513,42 @@
         return false;
       }
 
-      function findRandomAutoAssignableSlot(className, subject) {
+      function isSpecialistSlotAllowedByAvailability(subject, day, period, pePlace = "") {
+        if (subject === "체육") {
+          const peAvailability = getPeAvailability(day, period);
+          if (pePlace === "강당") return peAvailability.gym;
+          if (pePlace === "운동장") return peAvailability.ground;
+          return peAvailability.gym || peAvailability.ground;
+        }
+        return Boolean(specialistAvailableSlots[getSpecialistSlotKey(subject, day, period)]);
+      }
+
+      function findRandomAutoAssignableSlot(className, subject, subjectType = "specialist") {
         const candidates = [];
+        const specialistType = subjectType === "specialist";
 
         for (let period = 1; period <= maxPeriodCount; period += 1) {
           for (const day of days) {
             if (isDisabledSlot(day, period)) continue;
-            if (hasSubjectOnDayForClass(className, day, subject)) continue;
+            if (specialistType && hasSubjectOnDayForClass(className, day, subject)) continue;
             const existing = getEntry(className, day, period);
             if (existing) continue;
+            if (specialistType && specialistExcludedSlots.has(getCellKey(className, day, period))) continue;
+            if (specialistType && !isSpecialistSlotAllowedByAvailability(subject, day, period)) continue;
 
             if (subject === "체육") {
               for (const pePlace of ["강당", "운동장"]) {
                 const candidate = { subject: "체육", pePlace };
-                if (!hasSpecialistConflict(className, day, period, candidate, false)) {
-                  if (wouldCreateThreeConsecutiveSpecialists(className, day, period, candidate)) continue;
+                if (specialistType && !isSpecialistSlotAllowedByAvailability(subject, day, period, pePlace)) continue;
+                if (!specialistType || !hasSpecialistConflict(className, day, period, candidate, false)) {
+                  if (specialistType && wouldCreateThreeConsecutiveSpecialists(className, day, period, candidate)) continue;
                   candidates.push({ day, period, entry: candidate });
                 }
               }
             } else {
               const candidate = { subject };
-              if (!hasSpecialistConflict(className, day, period, candidate, false)) {
-                if (wouldCreateThreeConsecutiveSpecialists(className, day, period, candidate)) continue;
+              if (!specialistType || !hasSpecialistConflict(className, day, period, candidate, false)) {
+                if (specialistType && wouldCreateThreeConsecutiveSpecialists(className, day, period, candidate)) continue;
                 candidates.push({ day, period, entry: candidate });
               }
             }
@@ -1447,6 +1558,57 @@
         if (!candidates.length) return null;
         const randomIndex = Math.floor(Math.random() * candidates.length);
         return candidates[randomIndex];
+      }
+
+      function findRandomAutoAssignableBundle(className, subject, bundleSize, subjectType = "specialist") {
+        if (bundleSize <= 1) return findRandomAutoAssignableSlot(className, subject, subjectType);
+        const candidates = [];
+
+        for (const day of days) {
+          if (subjectType === "specialist" && hasSubjectOnDayForClass(className, day, subject)) continue;
+          for (let start = 1; start <= maxPeriodCount - bundleSize + 1; start += 1) {
+            const slots = [];
+            let valid = true;
+            for (let offset = 0; offset < bundleSize; offset += 1) {
+              const period = start + offset;
+              if (isDisabledSlot(day, period)) {
+                valid = false;
+                break;
+              }
+              if (getEntry(className, day, period)) {
+                valid = false;
+                break;
+              }
+              if (subjectType === "specialist") {
+                if (specialistExcludedSlots.has(getCellKey(className, day, period))) {
+                  valid = false;
+                  break;
+                }
+                if (!isSpecialistSlotAllowedByAvailability(subject, day, period)) {
+                  valid = false;
+                  break;
+                }
+              }
+              slots.push({ day, period, entry: { subject } });
+            }
+            if (!valid) continue;
+            if (subjectType === "specialist") {
+              for (const slot of slots) {
+                if (hasSpecialistConflict(className, slot.day, slot.period, slot.entry, false)) {
+                  valid = false;
+                  break;
+                }
+                if (wouldCreateThreeConsecutiveSpecialists(className, slot.day, slot.period, slot.entry)) {
+                  valid = false;
+                  break;
+                }
+              }
+            }
+            if (valid) candidates.push(slots);
+          }
+        }
+        if (!candidates.length) return null;
+        return candidates[Math.floor(Math.random() * candidates.length)];
       }
 
       function clearAutoGeneratedEntriesForSubjects(subjects) {
@@ -1489,21 +1651,40 @@
             const subject = input.dataset.subject;
             const target = targetCounts[subject];
             const assigned = countAssignedSubjectForClass(className, subject);
+            const subjectType = autoGenerateSubjectTypes[subject] || "specialist";
+            const seriesSize = getSeriesSize(subject);
             let needed = Math.max(0, target - assigned);
 
             while (needed > 0) {
-              const slot = findRandomAutoAssignableSlot(className, subject);
-              if (!slot) {
+              const bundleSize =
+                subjectType === "specialist" && subject !== "체육" ? Math.min(seriesSize, needed) : 1;
+              const bundle =
+                bundleSize > 1
+                  ? findRandomAutoAssignableBundle(className, subject, bundleSize, subjectType)
+                  : findRandomAutoAssignableSlot(className, subject, subjectType);
+              if (!bundle) {
                 shortages[subject] = (shortages[subject] || 0) + needed;
                 break;
               }
 
-              const assignedOk = await assignEntryToClassCell(className, slot.day, slot.period, slot.entry, false, "auto");
-              if (!assignedOk) {
+              let assignedCount = 0;
+              for (const slot of Array.isArray(bundle) ? bundle : [bundle]) {
+                const assignedOk = await assignEntryToClassCell(
+                  className,
+                  slot.day,
+                  slot.period,
+                  slot.entry,
+                  false,
+                  "auto"
+                );
+                if (!assignedOk) break;
+                assignedCount += 1;
+              }
+              if (!assignedCount) {
                 shortages[subject] = (shortages[subject] || 0) + needed;
                 break;
               }
-              needed -= 1;
+              needed -= assignedCount;
             }
           }
         }
@@ -1659,11 +1840,13 @@
               const nextSubject = value.trim();
               if (!nextSubject) {
                 delete subjectStore[key];
-                cell.textContent = "";
+                specialistExcludedSlots.add(key);
+                cell.textContent = "전담제외";
                 applySpecialistSlotColors();
                 renderSpecialistTimetables();
                 return;
               }
+              specialistExcludedSlots.delete(key);
 
               let nextEntry = { subject: nextSubject };
               if (nextSubject === "체육") {
@@ -1729,25 +1912,16 @@
         return assignments;
       }
 
-      function getPeAssignmentByPlace(day, period, pePlace) {
-        const classes = buildClasses(classCount);
-        for (const className of classes) {
-          const entry = getEntry(className, day, period);
-          if (entry?.subject === "체육" && entry.pePlace === pePlace) {
-            return { className, entry };
-          }
-        }
-        return null;
-      }
-
-      async function applySpecialistDropdownSelection(tableName, day, period, selectedClassNumber) {
+      async function applySpecialistDropdownSelection(tableName, day, period, selectedValue) {
         const existingAssignments = getSpecialistAssignmentsAtSlot(tableName, day, period);
         const backup = existingAssignments.map((item) => ({
           key: getCellKey(item.className, day, period),
           entry: item.entry
         }));
+        const slotKey = getSpecialistSlotKey(tableName, day, period);
 
-        if (!selectedClassNumber) {
+        if (!selectedValue) {
+          delete specialistAvailableSlots[slotKey];
           backup.forEach((item) => {
             delete subjectStore[item.key];
           });
@@ -1755,7 +1929,16 @@
           return;
         }
 
-        const className = `${selectedClassNumber}반`;
+        if (selectedValue === "O") {
+          backup.forEach((item) => {
+            delete subjectStore[item.key];
+          });
+          specialistAvailableSlots[slotKey] = true;
+          renderTimetables();
+          return;
+        }
+
+        const className = `${selectedValue}반`;
         let nextEntry = { subject: tableName };
         if (tableName === "체육") {
           const defaultPlace =
@@ -1771,6 +1954,7 @@
         backup.forEach((item) => {
           delete subjectStore[item.key];
         });
+        delete specialistAvailableSlots[slotKey];
 
         if (!(await assignEntryToClassCell(className, day, period, nextEntry, true, "manual", true))) {
           backup.forEach((item) => {
@@ -1783,54 +1967,19 @@
         renderTimetables();
       }
 
-      async function applyPePlaceDropdownSelection(day, period, pePlace, selectedClassNumber) {
-        const existing = getPeAssignmentByPlace(day, period, pePlace);
-        const backup = existing
-          ? [{ key: getCellKey(existing.className, day, period), entry: existing.entry }]
-          : [];
-
-        if (!selectedClassNumber) {
-          backup.forEach((item) => {
-            delete subjectStore[item.key];
-          });
-          renderTimetables();
-          return;
-        }
-
-        const className = `${selectedClassNumber}반`;
-        backup.forEach((item) => {
-          delete subjectStore[item.key];
-        });
-
-        const nextEntry = { subject: "체육", pePlace };
-        if (!(await assignEntryToClassCell(className, day, period, nextEntry, true, "manual", true))) {
-          backup.forEach((item) => {
-            subjectStore[item.key] = item.entry;
-          });
-          renderTimetables();
-          return;
+      function applyPeAvailabilitySelection(day, period, mode) {
+        const current = getPeAvailability(day, period);
+        if (mode === "clear") {
+          setPeAvailability(day, period, { gym: false, ground: false });
+        } else if (mode === "gym") {
+          setPeAvailability(day, period, { gym: !current.gym, ground: current.ground });
+        } else if (mode === "ground") {
+          setPeAvailability(day, period, { gym: current.gym, ground: !current.ground });
+        } else if (mode === "both") {
+          const allEnabled = current.gym && current.ground;
+          setPeAvailability(day, period, { gym: !allEnabled, ground: !allEnabled });
         }
         renderTimetables();
-      }
-
-      async function applyPeClassSelectionFlow(day, period, selectedClassNumber) {
-        if (!selectedClassNumber) {
-          ["강당", "운동장"].forEach((place) => {
-            const existing = getPeAssignmentByPlace(day, period, place);
-            if (existing) {
-              delete subjectStore[getCellKey(existing.className, day, period)];
-            }
-          });
-          renderTimetables();
-          return;
-        }
-
-        const pePlace = await openPePlacePicker("강당");
-        if (pePlace === null) {
-          renderTimetables();
-          return;
-        }
-        await applyPePlaceDropdownSelection(day, period, pePlace, selectedClassNumber);
       }
 
       function editSpecialistCell(cell, tableName, day, period) {
@@ -1850,6 +1999,16 @@
           });
           menu.appendChild(clearButton);
 
+          const openSlotButton = document.createElement("button");
+          openSlotButton.type = "button";
+          openSlotButton.className = "class-select-option";
+          openSlotButton.textContent = "O (가능 시간)";
+          openSlotButton.addEventListener("click", async (event) => {
+            event.stopPropagation();
+            await onSelect("O");
+          });
+          menu.appendChild(openSlotButton);
+
           for (let number = 1; number <= classCount; number += 1) {
             const option = document.createElement("button");
             option.type = "button";
@@ -1864,9 +2023,45 @@
         };
 
         if (tableName === "체육") {
-          renderOptions(async (classNumber) => {
-            await applyPeClassSelectionFlow(day, period, classNumber);
+          const clearButton = document.createElement("button");
+          clearButton.type = "button";
+          clearButton.className = "class-select-option";
+          clearButton.textContent = "비우기";
+          clearButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            applyPeAvailabilitySelection(day, period, "clear");
           });
+          menu.appendChild(clearButton);
+
+          const gymButton = document.createElement("button");
+          gymButton.type = "button";
+          gymButton.className = "class-select-option";
+          gymButton.textContent = "강당 배치 가능 토글";
+          gymButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            applyPeAvailabilitySelection(day, period, "gym");
+          });
+          menu.appendChild(gymButton);
+
+          const groundButton = document.createElement("button");
+          groundButton.type = "button";
+          groundButton.className = "class-select-option";
+          groundButton.textContent = "운동장 배치 가능 토글";
+          groundButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            applyPeAvailabilitySelection(day, period, "ground");
+          });
+          menu.appendChild(groundButton);
+
+          const bothButton = document.createElement("button");
+          bothButton.type = "button";
+          bothButton.className = "class-select-option";
+          bothButton.textContent = "강당+운동장 동시 가능 토글";
+          bothButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            applyPeAvailabilitySelection(day, period, "both");
+          });
+          menu.appendChild(bothButton);
         } else {
           renderOptions(async (classNumber) => {
             await applySpecialistDropdownSelection(tableName, day, period, classNumber);
@@ -1955,10 +2150,6 @@
 
       function setupAutoGenerate() {
         autoGenerateBtn.addEventListener("click", () => {
-          if (!hasAnyPeAssigned()) {
-            window.alert("자동 시간표 생성을 시작하기 전에 체육 과목을 먼저 배치해 주세요.");
-            return;
-          }
           openAutoGenerateModal();
         });
 
