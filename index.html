@@ -304,6 +304,10 @@
         background: #c4b5fd;
       }
 
+      .pe-picker-actions .other-btn {
+        background: #f9a8d4;
+      }
+
       .pe-picker-cancel {
         margin-top: 8px;
         width: 100%;
@@ -346,7 +350,7 @@
 
       .auto-row {
         display: grid;
-        grid-template-columns: 1fr 90px 80px 120px 80px;
+        grid-template-columns: 1fr 90px 150px 80px;
         align-items: center;
         gap: 10px;
         margin-bottom: 8px;
@@ -364,6 +368,10 @@
         padding: 5px 7px;
       }
 
+      .custom-hour-input {
+        display: none;
+      }
+
       .auto-field {
         display: grid;
         gap: 2px;
@@ -373,6 +381,15 @@
         font-size: 0.72rem;
         color: #6b7280;
         font-weight: 700;
+      }
+
+      .auto-specialist-label {
+        color: #7c3aed;
+      }
+
+      .auto-subject-divider {
+        border-top: 1px dashed #c4b5fd;
+        margin: 8px 0 10px;
       }
 
       .teacher-picker {
@@ -388,6 +405,7 @@
         text-align: left;
         cursor: pointer;
         font-size: 0.85rem;
+        white-space: nowrap;
       }
 
       .teacher-menu {
@@ -414,18 +432,20 @@
         padding: 7px 8px;
         text-align: left;
         cursor: pointer;
+        white-space: nowrap;
       }
 
       .class-select-menu {
         position: absolute;
-        left: 4px;
-        right: 4px;
-        top: 4px;
+        left: 50%;
+        transform: translateX(-50%);
+        top: 2px;
         z-index: 90;
         border: 1px solid var(--line);
         border-radius: 8px;
         background: #fff;
         box-shadow: 0 6px 20px rgba(23, 42, 70, 0.2);
+        min-width: 88px;
         max-height: 180px;
         overflow: auto;
       }
@@ -437,6 +457,41 @@
         padding: 7px 8px;
         text-align: left;
         cursor: pointer;
+      }
+
+      .pe-quick-menu {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+        min-width: 186px;
+        max-height: none;
+        overflow: visible;
+      }
+
+      .pe-quick-btn {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 7px 6px;
+        font-weight: 800;
+        cursor: pointer;
+        color: #111827;
+      }
+
+      .pe-quick-btn.gym {
+        background: #86efac;
+      }
+
+      .pe-quick-btn.ground {
+        background: #c4b5fd;
+      }
+
+      .pe-quick-btn.other {
+        background: #f9a8d4;
+      }
+
+      .pe-quick-btn.inactive {
+        opacity: 0.35;
       }
 
       .class-select-section-title {
@@ -523,6 +578,10 @@
         background: #fff;
         border: 1px solid var(--line);
         border-radius: 10px;
+        overflow: visible;
+      }
+
+      .specialist-card td {
         overflow: visible;
       }
 
@@ -619,11 +678,11 @@
       <h1>학급별 주간 시간표</h1>
       <section class="usage-guide" aria-label="사용 방법 안내">
         <ol>
-          <li>반 개수와 최대 교시를 먼저 정하고, 전담 과목에서 필요한 과목(없으면 A~F/강사1~3)을 체크하세요.</li>
+          <li>반 개수와 최대 교시를 먼저 정하고, 전담 과목에서 필요한 과목을 체크하세요.</li>
           <li>자동 생성 전에는 체육을 먼저 배치하고, 마지막 교시 X 설정으로 요일별 마지막 교시 사용 여부를 정하세요.</li>
           <li>학급 시간표 칸에 과목을 직접 입력하거나, 전담 시간표 칸에 반 번호를 입력해도 같은 위치에 서로 연동됩니다.</li>
           <li>자동 생성은 설정한 시수대로 전담 과목을 배치하며, 다시 실행해도 수동 확정값/체육/X 설정은 유지됩니다.</li>
-          <li>중복 확인 버튼으로 충돌 여부를 빠르게 점검하세요.</li>
+          <li>필요 시 전담 시간표와 반별 시간표의 같은 시간대를 비교해 충돌 여부를 점검하세요.</li>
         </ol>
         <div class="credit-note">
           제작: github: azkabantuna ·
@@ -657,10 +716,19 @@
         </div>
 
         <div class="control-group">
-          <button id="autoGenerateBtn" class="auto-generate-btn" type="button">자동 시간표 생성</button>
+          <label for="homeroomToggle">담임 과목</label>
+          <div class="specialist-picker">
+            <button id="homeroomToggle" class="specialist-toggle" type="button" aria-expanded="false">
+              담임 과목 선택 (복수 선택)
+            </button>
+            <div id="homeroomMenu" class="specialist-menu" role="listbox" aria-multiselectable="true">
+              <div id="homeroomOptions" class="subject-options"></div>
+            </div>
+          </div>
         </div>
+
         <div class="control-group">
-          <button id="checkDuplicateBtn" class="check-duplicate-btn" type="button">중복 확인</button>
+          <button id="autoGenerateBtn" class="auto-generate-btn" type="button">자동 시간표 생성</button>
         </div>
       </section>
 
@@ -680,6 +748,7 @@
         <div class="pe-picker-actions">
           <button type="button" class="gym-btn" data-pe-place="강당">강당</button>
           <button type="button" class="ground-btn" data-pe-place="운동장">운동장</button>
+          <button type="button" class="other-btn" data-pe-place="그 외">그 외</button>
         </div>
         <button type="button" id="pePickerCancel" class="pe-picker-cancel">취소</button>
       </div>
@@ -724,25 +793,51 @@
 
     <script>
       const days = ["월", "화", "수", "목", "금"];
-      const specialistSubjects = [
-        { name: "영어", color: "#fde68a" },
-        { name: "도덕", color: "#fbcfe8" },
-        { name: "과학", color: "#bfdbfe" },
-        { name: "미술", color: "#fecaca" },
-        { name: "음악", color: "#ddd6fe" },
-        { name: "실과", color: "#fed7aa" },
-        { name: "강사1", color: "#a7f3d0" },
-        { name: "강사2", color: "#fdba74" },
-        { name: "강사3", color: "#f0abfc" },
-        { name: "A", color: "#f9a8d4" },
-        { name: "B", color: "#fcd34d" },
-        { name: "C", color: "#93c5fd" },
-        { name: "D", color: "#86efac" },
-        { name: "E", color: "#c4b5fd" },
-        { name: "F", color: "#fca5a5" },
-        { name: "자율", color: "#fde68a" },
-        { name: "창체", color: "#bfdbfe" }
+      const PE_SUBJECT = "체육";
+      const specialistSubjectNames = [
+        "국어",
+        "영어",
+        "수학",
+        "사회",
+        "과학",
+        "음악",
+        "미술",
+        PE_SUBJECT,
+        "실과",
+        "도덕",
+        "통합",
+        "창체",
+        "자율",
+        "동아리",
+        "강사1",
+        "강사2",
+        "과목1",
+        "과목2"
       ];
+      const specialistSubjectColors = [
+        "#fde68a",
+        "#fbcfe8",
+        "#bfdbfe",
+        "#fecaca",
+        "#ddd6fe",
+        "#fed7aa",
+        "#a7f3d0",
+        "#fdba74",
+        "#f0abfc",
+        "#93c5fd",
+        "#86efac",
+        "#c4b5fd",
+        "#fca5a5",
+        "#f9a8d4",
+        "#fcd34d",
+        "#99f6e4",
+        "#bae6fd",
+        "#fecdd3"
+      ];
+      const specialistSubjects = specialistSubjectNames.map((name, index) => ({
+        name,
+        color: specialistSubjectColors[index % specialistSubjectColors.length]
+      }));
 
       const classCountSelect = document.getElementById("classCountSelect");
       const periodCountSelect = document.getElementById("periodCountSelect");
@@ -751,6 +846,9 @@
       const specialistToggle = document.getElementById("specialistToggle");
       const specialistMenu = document.getElementById("specialistMenu");
       const subjectOptions = document.getElementById("subjectOptions");
+      const homeroomToggle = document.getElementById("homeroomToggle");
+      const homeroomMenu = document.getElementById("homeroomMenu");
+      const homeroomOptions = document.getElementById("homeroomOptions");
       const pePickerModal = document.getElementById("pePickerModal");
       const pePickerCancel = document.getElementById("pePickerCancel");
       const autoGenerateBtn = document.getElementById("autoGenerateBtn");
@@ -759,7 +857,6 @@
       const autoGenerateRunBtn = document.getElementById("autoGenerateRunBtn");
       const autoGenerateCancelBtn = document.getElementById("autoGenerateCancelBtn");
       const lastPeriodBody = document.getElementById("lastPeriodBody");
-      const checkDuplicateBtn = document.getElementById("checkDuplicateBtn");
       const conflictConfirmModal = document.getElementById("conflictConfirmModal");
       const conflictProceedBtn = document.getElementById("conflictProceedBtn");
       const conflictCancelBtn = document.getElementById("conflictCancelBtn");
@@ -769,21 +866,21 @@
 
       const subjectStore = {};
       const selectedSpecialists = new Set();
+      const selectedHomerooms = new Set();
       const disabledLastPeriodDays = new Set();
       const autoGenerateSubjectCounts = {};
-      const autoGenerateSubjectTypes = {};
       const autoGenerateSubjectSeries = {};
       const subjectTeacherAssignments = {};
       const specialistAvailableSlots = {};
       const peAvailableSlots = {};
       const specialistExcludedSlots = new Set();
-      const allSpecialistSubjectNames = new Set(["체육", ...specialistSubjects.map((subject) => subject.name)]);
       const specialistColorMap = Object.fromEntries(
         specialistSubjects.map((subject) => [subject.name, subject.color])
       );
       const pePlaceColorMap = {
         강당: "#86efac",
-        운동장: "#c4b5fd"
+        운동장: "#c4b5fd",
+        "그 외": "#f9a8d4"
       };
       let pePickerResolver = null;
       let conflictConfirmResolver = null;
@@ -811,7 +908,11 @@
       }
 
       function isSpecialistSubject(subject) {
-        return subject === "체육" || selectedSpecialists.has(subject);
+        return selectedSpecialists.has(subject);
+      }
+
+      function isHomeroomSubject(subject) {
+        return selectedHomerooms.has(subject);
       }
 
       function getEntry(className, day, period) {
@@ -822,22 +923,31 @@
         return subjectTeacherAssignments[subject] || "";
       }
 
+      function getSeriesMode(subject) {
+        return String(autoGenerateSubjectSeries[subject] ?? "possible");
+      }
+
       function getSeriesSize(subject) {
-        const value = Number(autoGenerateSubjectSeries[subject] ?? 1);
-        return Number.isFinite(value) && value >= 1 ? Math.min(5, Math.floor(value)) : 1;
+        return getSeriesMode(subject) === "double" ? 2 : null;
+      }
+
+      function getDailySubjectLimit(subject) {
+        if (subject === PE_SUBJECT) return 1;
+        return getSeriesMode(subject) === "impossible" ? 1 : 2;
       }
 
       function getPeAvailability(day, period) {
-        return peAvailableSlots[getPeSlotKey(day, period)] || { gym: false, ground: false };
+        return peAvailableSlots[getPeSlotKey(day, period)] || { gym: false, ground: false, other: false };
       }
 
       function setPeAvailability(day, period, nextState) {
         const key = getPeSlotKey(day, period);
         const normalized = {
           gym: Boolean(nextState?.gym),
-          ground: Boolean(nextState?.ground)
+          ground: Boolean(nextState?.ground),
+          other: Boolean(nextState?.other)
         };
-        if (!normalized.gym && !normalized.ground) {
+        if (!normalized.gym && !normalized.ground && !normalized.other) {
           delete peAvailableSlots[key];
         } else {
           peAvailableSlots[key] = normalized;
@@ -863,7 +973,9 @@
       function getRestrictionText(entry) {
         if (!entry) return "";
         if (entry.subject === "체육" && entry.pePlace) {
-          return entry.pePlace === "강당" ? "체강X" : "체운X";
+          if (entry.pePlace === "강당") return "체강X";
+          if (entry.pePlace === "운동장") return "체운X";
+          return "체외X";
         }
         if (entry.subject.startsWith("강사")) {
           const instructorNumber = entry.subject.replace("강사", "");
@@ -965,39 +1077,19 @@
       }
 
       function openAutoGenerateModal() {
-        const subjects = ["체육", ...Array.from(selectedSpecialists)];
+        const specialistList = Array.from(selectedSpecialists);
+        const homeroomList = Array.from(selectedHomerooms).filter((subject) => !selectedSpecialists.has(subject));
         autoGenerateRows.innerHTML = "";
 
-        subjects.forEach((subject) => {
+        const renderRow = (subject, subjectGroup) => {
           const row = document.createElement("div");
           row.className = "auto-row";
 
           const label = document.createElement("label");
           label.textContent = subject;
-
-          const typeField = document.createElement("div");
-          typeField.className = "auto-field";
-          const typeTitle = document.createElement("span");
-          typeTitle.className = "auto-field-title";
-          typeTitle.textContent = "구분";
-          const typeSelect = document.createElement("select");
-          typeSelect.dataset.subjectType = subject;
-          [
-            { value: "specialist", text: "전담" },
-            { value: "general", text: "일반" }
-          ].forEach((item) => {
-            const option = document.createElement("option");
-            option.value = item.value;
-            option.textContent = item.text;
-            typeSelect.appendChild(option);
-          });
-          const defaultType = subject === "자율" || subject === "창체" ? "general" : "specialist";
-          typeSelect.value = autoGenerateSubjectTypes[subject] || defaultType;
-          autoGenerateSubjectTypes[subject] = typeSelect.value;
-          typeSelect.addEventListener("change", () => {
-            autoGenerateSubjectTypes[subject] = typeSelect.value;
-          });
-          typeField.append(typeTitle, typeSelect);
+          if (subjectGroup === "specialist") {
+            label.classList.add("auto-specialist-label");
+          }
 
           const hourField = document.createElement("div");
           hourField.className = "auto-field";
@@ -1013,13 +1105,54 @@
             option.textContent = `${hour}`;
             input.appendChild(option);
           }
-          input.value = String(autoGenerateSubjectCounts[subject] ?? 1);
+          const customOption = document.createElement("option");
+          customOption.value = "custom";
+          customOption.textContent = "직접 입력";
+          input.appendChild(customOption);
+
+          const customInput = document.createElement("input");
+          customInput.type = "number";
+          customInput.min = "0";
+          customInput.step = "1";
+          customInput.placeholder = "시수 입력";
+          customInput.className = "custom-hour-input";
+          customInput.setAttribute("aria-label", `${subject} 직접 입력 시수`);
+
+          const savedCount = autoGenerateSubjectCounts[subject];
+          if (Number.isFinite(savedCount) && savedCount >= 1 && savedCount <= 5) {
+            input.value = String(savedCount);
+            customInput.style.display = "none";
+          } else if (Number.isFinite(savedCount) && savedCount >= 0) {
+            input.value = "custom";
+            customInput.value = String(Math.floor(savedCount));
+            customInput.style.display = "block";
+          } else {
+            input.value = "1";
+            customInput.style.display = "none";
+            autoGenerateSubjectCounts[subject] = 1;
+          }
+
           input.addEventListener("change", () => {
+            if (input.value === "custom") {
+              customInput.style.display = "block";
+              if (!customInput.value) customInput.value = String(autoGenerateSubjectCounts[subject] ?? 0);
+              const parsed = Number(customInput.value);
+              autoGenerateSubjectCounts[subject] =
+                Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 0;
+              customInput.focus();
+              return;
+            }
+            customInput.style.display = "none";
             const parsed = Number(input.value);
             autoGenerateSubjectCounts[subject] =
               Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 0;
           });
-          hourField.append(hourTitle, input);
+          customInput.addEventListener("input", () => {
+            const parsed = Number(customInput.value);
+            autoGenerateSubjectCounts[subject] =
+              Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 0;
+          });
+          hourField.append(hourTitle, input, customInput);
 
           const teacherField = document.createElement("div");
           teacherField.className = "auto-field";
@@ -1031,16 +1164,20 @@
           const teacherToggle = document.createElement("button");
           teacherToggle.type = "button";
           teacherToggle.className = "teacher-toggle";
-          teacherToggle.textContent = getAssignedTeacher(subject) || "미지정";
+          const defaultTeacher = subjectGroup === "specialist" ? "A교사" : "담임";
+          if (!subjectTeacherAssignments[subject]) {
+            subjectTeacherAssignments[subject] = defaultTeacher;
+          }
+          teacherToggle.textContent = getAssignedTeacher(subject) || defaultTeacher;
           const teacherMenu = document.createElement("div");
           teacherMenu.className = "teacher-menu";
-          ["미지정", "교사1", "교사2", "교사3", "교사4", "교사5"].forEach((teacherName) => {
+          ["담임", "A교사", "B교사", "C교사", "D강사", "E강사"].forEach((teacherName) => {
             const option = document.createElement("button");
             option.type = "button";
             option.className = "teacher-option";
             option.textContent = teacherName;
             option.addEventListener("click", () => {
-              subjectTeacherAssignments[subject] = teacherName === "미지정" ? "" : teacherName;
+              subjectTeacherAssignments[subject] = teacherName;
               teacherToggle.textContent = teacherName;
               teacherMenu.classList.remove("open");
             });
@@ -1059,21 +1196,33 @@
           seriesTitle.textContent = "연차시";
           const seriesSelect = document.createElement("select");
           seriesSelect.dataset.subjectSeries = subject;
-          for (let series = 1; series <= 5; series += 1) {
+          [
+            { value: "possible", text: "가능" },
+            { value: "impossible", text: "불가능" },
+            { value: "double", text: "2연차시" }
+          ].forEach((series) => {
             const option = document.createElement("option");
-            option.value = String(series);
-            option.textContent = `${series}`;
+            option.value = series.value;
+            option.textContent = series.text;
             seriesSelect.appendChild(option);
-          }
-          seriesSelect.value = String(getSeriesSize(subject));
+          });
+          seriesSelect.value = getSeriesMode(subject);
           seriesSelect.addEventListener("change", () => {
-            autoGenerateSubjectSeries[subject] = Number(seriesSelect.value) || 1;
+            autoGenerateSubjectSeries[subject] = seriesSelect.value || "possible";
           });
           seriesField.append(seriesTitle, seriesSelect);
 
-          row.append(label, typeField, hourField, teacherField, seriesField);
+          row.append(label, hourField, teacherField, seriesField);
           autoGenerateRows.appendChild(row);
-        });
+        };
+
+        specialistList.forEach((subject) => renderRow(subject, "specialist"));
+        if (specialistList.length && homeroomList.length) {
+          const divider = document.createElement("div");
+          divider.className = "auto-subject-divider";
+          autoGenerateRows.appendChild(divider);
+        }
+        homeroomList.forEach((subject) => renderRow(subject, "homeroom"));
 
         renderLastPeriodToggleRow();
         autoGenerateModal.classList.add("open");
@@ -1113,13 +1262,7 @@
       }
 
       function getSpecialistTableNames() {
-        const names = ["체육"];
-        selectedSpecialists.forEach((subject) => {
-          if (subject !== "체육") {
-            names.push(subject);
-          }
-        });
-        return names;
+        return Array.from(selectedSpecialists);
       }
 
       function getEntryTableName(entry) {
@@ -1210,16 +1353,42 @@
               td.style.textDecoration = "none";
 
               if (tableName === "체육") {
+                const peAssignments = getPeAssignmentsByPlace(day, period);
+                const assignmentLabels = [];
+                if (peAssignments.gym.length) {
+                  assignmentLabels.push(`강${peAssignments.gym.join(",")}`);
+                }
+                if (peAssignments.ground.length) {
+                  assignmentLabels.push(`운${peAssignments.ground.join(",")}`);
+                }
+                if (peAssignments.other.length) {
+                  assignmentLabels.push(`외${peAssignments.other.join(",")}`);
+                }
+                if (assignmentLabels.length) {
+                  td.style.backgroundImage = "";
+                  td.style.background = "#e5e7eb";
+                  td.textContent = assignmentLabels.join(" / ");
+                  td.style.textDecoration = matchedEntries.some((entry) => entry.source !== "auto")
+                    ? "underline"
+                    : "none";
+                  row.appendChild(td);
+                  return;
+                }
+
                 const peAvailability = getPeAvailability(day, period);
                 const peLabels = [];
                 const colors = [];
                 if (peAvailability.gym) {
-                  peLabels.push("강당 O");
+                  peLabels.push("강O");
                   colors.push(pePlaceColorMap["강당"]);
                 }
                 if (peAvailability.ground) {
-                  peLabels.push("운동장 O");
+                  peLabels.push("운O");
                   colors.push(pePlaceColorMap["운동장"]);
+                }
+                if (peAvailability.other) {
+                  peLabels.push("외O");
+                  colors.push(pePlaceColorMap["그 외"]);
                 }
                 if (colors.length > 1) {
                   td.style.backgroundImage = buildMultiColorGradient(colors);
@@ -1267,8 +1436,28 @@
                 editSpecialistCell(td, tableName, day, period);
               });
               td.addEventListener("keydown", (event) => {
+                if (/^\d$/.test(event.key)) {
+                  const classNumber = Number(event.key);
+                  if (classNumber >= 1 && classNumber <= classCount) {
+                    event.preventDefault();
+                    applySpecialistDropdownSelection(tableName, day, period, String(classNumber), "keyboard");
+                  }
+                  return;
+                }
+
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
+                  const openedMenu = td.querySelector(".class-select-menu");
+                  if (event.key === "Enter" && td.textContent.trim()) {
+                    if (clearSpecialistCellDisplayValue(tableName, day, period)) {
+                      renderTimetables();
+                      return;
+                    }
+                  }
+                  if (openedMenu && event.key === "Enter" && tableName !== "체육") {
+                    toggleSpecialistAvailabilitySlot(tableName, day, period);
+                    return;
+                  }
                   editSpecialistCell(td, tableName, day, period);
                 }
               });
@@ -1377,6 +1566,16 @@
 
       function getSpecialistConflictMessage(targetClass, day, period, nextEntry) {
         if (!isSpecialistSubject(nextEntry.subject)) return false;
+        const existingTargetEntry = getEntry(targetClass, day, period);
+        if (
+          existingTargetEntry &&
+          isSpecialistSubject(existingTargetEntry.subject) &&
+          (existingTargetEntry.subject !== nextEntry.subject || existingTargetEntry.pePlace !== nextEntry.pePlace)
+        ) {
+          return `${targetClass} ${day} ${period}교시에는 이미 ${getEntryDisplayText(
+            existingTargetEntry
+          )}이(가) 배치되어 있습니다.`;
+        }
 
         const classes = buildClasses(classCount);
 
@@ -1427,7 +1626,7 @@
         if (
           source === "auto" &&
           isSpecialistSubject(nextEntry.subject) &&
-          hasSubjectInOtherPeriodSameDay(className, day, period, nextEntry.subject)
+          countSubjectOnDayForClass(className, day, nextEntry.subject) >= getDailySubjectLimit(nextEntry.subject)
         ) {
           return false;
         }
@@ -1444,7 +1643,9 @@
             return false;
           }
         }
-        specialistExcludedSlots.delete(key);
+        if (source !== "auto") {
+          specialistExcludedSlots.delete(key);
+        }
         subjectStore[key] = { ...nextEntry, source };
         return true;
       }
@@ -1494,7 +1695,7 @@
 
       // 3차시 연속 전담 배치 방지 로직 (수정된 부분)
       function wouldCreateThreeConsecutiveSpecialists(className, day, period, nextEntry) {
-        if (!allSpecialistSubjectNames.has(nextEntry.subject)) return false;
+        if (!isSpecialistSubject(nextEntry.subject)) return false;
 
         let consecutive = 0;
         for (let currentPeriod = 1; currentPeriod <= maxPeriodCount; currentPeriod += 1) {
@@ -1503,7 +1704,7 @@
             currentEntry = nextEntry;
           }
 
-          if (currentEntry && allSpecialistSubjectNames.has(currentEntry.subject)) {
+          if (currentEntry && isSpecialistSubject(currentEntry.subject)) {
             consecutive += 1;
             if (consecutive >= 3) return true;
           } else {
@@ -1518,26 +1719,90 @@
           const peAvailability = getPeAvailability(day, period);
           if (pePlace === "강당") return peAvailability.gym;
           if (pePlace === "운동장") return peAvailability.ground;
-          return peAvailability.gym || peAvailability.ground;
+          if (pePlace === "그 외") return peAvailability.other;
+          return peAvailability.gym || peAvailability.ground || peAvailability.other;
         }
+        const hasAnyAvailability = Object.keys(specialistAvailableSlots).some((key) =>
+          key.startsWith(`${subject}__`)
+        );
+        if (!hasAnyAvailability) return true;
         return Boolean(specialistAvailableSlots[getSpecialistSlotKey(subject, day, period)]);
+      }
+
+      function countSubjectOnDayForClass(className, day, subject) {
+        let count = 0;
+        for (let period = 1; period <= maxPeriodCount; period += 1) {
+          const entry = getEntry(className, day, period);
+          if (!entry) continue;
+          if (subject === PE_SUBJECT) {
+            if (entry.subject === PE_SUBJECT) count += 1;
+          } else if (entry.subject === subject) {
+            count += 1;
+          }
+        }
+        return count;
+      }
+
+      function canPlaceHomeroomSubjectAt(className, day, period, subject) {
+        const subjectPeriods = [];
+        for (let currentPeriod = 1; currentPeriod <= maxPeriodCount; currentPeriod += 1) {
+          const entry = getEntry(className, day, currentPeriod);
+          if (entry?.subject === subject) subjectPeriods.push(currentPeriod);
+        }
+        if (subjectPeriods.length >= 2) return false;
+        if (subjectPeriods.length === 1) {
+          return Math.abs(subjectPeriods[0] - period) === 1;
+        }
+        return true;
+      }
+
+      function getPePlaceAssignCountForClass(className, pePlace) {
+        let count = 0;
+        for (let period = 1; period <= maxPeriodCount; period += 1) {
+          for (const day of days) {
+            const entry = getEntry(className, day, period);
+            if (entry?.subject === "체육" && entry.pePlace === pePlace) {
+              count += 1;
+            }
+          }
+        }
+        return count;
+      }
+
+      function hasPePlaceAssignedForClass(className, pePlace) {
+        for (let period = 1; period <= maxPeriodCount; period += 1) {
+          for (const day of days) {
+            const entry = getEntry(className, day, period);
+            if (entry?.subject === PE_SUBJECT && entry.pePlace === pePlace) {
+              return true;
+            }
+          }
+        }
+        return false;
       }
 
       function findRandomAutoAssignableSlot(className, subject, subjectType = "specialist") {
         const candidates = [];
         const specialistType = subjectType === "specialist";
+        const dailyLimit = getDailySubjectLimit(subject);
 
         for (let period = 1; period <= maxPeriodCount; period += 1) {
           for (const day of days) {
             if (isDisabledSlot(day, period)) continue;
-            if (specialistType && hasSubjectOnDayForClass(className, day, subject)) continue;
+            if (countSubjectOnDayForClass(className, day, subject) >= dailyLimit) continue;
             const existing = getEntry(className, day, period);
             if (existing) continue;
             if (specialistType && specialistExcludedSlots.has(getCellKey(className, day, period))) continue;
             if (specialistType && !isSpecialistSlotAllowedByAvailability(subject, day, period)) continue;
+            if (!specialistType && !canPlaceHomeroomSubjectAt(className, day, period, subject)) continue;
 
             if (subject === "체육") {
-              for (const pePlace of ["강당", "운동장"]) {
+              const orderedPePlaces = ["강당", "운동장", "그 외"].sort(
+                (a, b) =>
+                  getPePlaceAssignCountForClass(className, a) - getPePlaceAssignCountForClass(className, b)
+              );
+              for (const pePlace of orderedPePlaces) {
+                if (hasPePlaceAssignedForClass(className, pePlace)) continue;
                 const candidate = { subject: "체육", pePlace };
                 if (specialistType && !isSpecialistSlotAllowedByAvailability(subject, day, period, pePlace)) continue;
                 if (!specialistType || !hasSpecialistConflict(className, day, period, candidate, false)) {
@@ -1563,9 +1828,10 @@
       function findRandomAutoAssignableBundle(className, subject, bundleSize, subjectType = "specialist") {
         if (bundleSize <= 1) return findRandomAutoAssignableSlot(className, subject, subjectType);
         const candidates = [];
+        const dailyLimit = getDailySubjectLimit(subject);
 
         for (const day of days) {
-          if (subjectType === "specialist" && hasSubjectOnDayForClass(className, day, subject)) continue;
+          if (countSubjectOnDayForClass(className, day, subject) + bundleSize > dailyLimit) continue;
           for (let start = 1; start <= maxPeriodCount - bundleSize + 1; start += 1) {
             const slots = [];
             let valid = true;
@@ -1589,6 +1855,10 @@
                   break;
                 }
               }
+              if (subjectType !== "specialist" && !canPlaceHomeroomSubjectAt(className, day, period, subject)) {
+                valid = false;
+                break;
+              }
               slots.push({ day, period, entry: { subject } });
             }
             if (!valid) continue;
@@ -1604,11 +1874,71 @@
                 }
               }
             }
-            if (valid) candidates.push(slots);
+            if (valid) {
+              const edgeDistance = Math.min(start - 1, maxPeriodCount - (start + bundleSize - 1));
+              candidates.push({ slots, edgeDistance });
+            }
           }
         }
         if (!candidates.length) return null;
-        return candidates[Math.floor(Math.random() * candidates.length)];
+        const minDistance = Math.min(...candidates.map((item) => item.edgeDistance));
+        const edgePreferred = candidates.filter((item) => item.edgeDistance === minDistance);
+        const pool = edgePreferred.length ? edgePreferred : candidates;
+        return pool[Math.floor(Math.random() * pool.length)].slots;
+      }
+
+      function explainAutoPlacementFailure(className, subject, subjectType = "specialist", bundleSize = 1) {
+        if (bundleSize > 1) {
+          return "연차시 조건 충돌(연속 가능한 시간대 부족)";
+        }
+        if (subject === PE_SUBJECT) {
+          const allPePlacesUsed = ["강당", "운동장", "그 외"].every((pePlace) =>
+            hasPePlaceAssignedForClass(className, pePlace)
+          );
+          if (allPePlacesUsed) {
+            return "같은 공간 체육 중복 금지 규칙으로 배치 불가";
+          }
+        }
+
+        let candidateCount = 0;
+        let afterDisabled = 0;
+        let afterOccupied = 0;
+        let afterExcluded = 0;
+        let afterAvailability = 0;
+        let afterDaily = 0;
+        let afterConflict = 0;
+        let afterConsecutive = 0;
+
+        for (let period = 1; period <= maxPeriodCount; period += 1) {
+          for (const day of days) {
+            candidateCount += 1;
+            if (isDisabledSlot(day, period)) continue;
+            afterDisabled += 1;
+            if (getEntry(className, day, period)) continue;
+            afterOccupied += 1;
+            if (countSubjectOnDayForClass(className, day, subject) >= getDailySubjectLimit(subject)) continue;
+            afterDaily += 1;
+            if (subjectType === "specialist" && specialistExcludedSlots.has(getCellKey(className, day, period))) continue;
+            afterExcluded += 1;
+            if (subjectType === "specialist" && !isSpecialistSlotAllowedByAvailability(subject, day, period)) continue;
+            afterAvailability += 1;
+            if (subjectType !== "specialist" && !canPlaceHomeroomSubjectAt(className, day, period, subject)) continue;
+            const nextEntry = { subject };
+            if (subjectType === "specialist" && hasSpecialistConflict(className, day, period, nextEntry, false)) continue;
+            afterConflict += 1;
+            if (subjectType === "specialist" && wouldCreateThreeConsecutiveSpecialists(className, day, period, nextEntry)) continue;
+            afterConsecutive += 1;
+          }
+        }
+
+        if (!afterDisabled) return "마지막 교시 X 등 비활성 슬롯으로 배치 칸 부족";
+        if (!afterOccupied) return "수동 확정값/기존 배치로 빈칸 부족";
+        if (!afterDaily) return "같은 날 동일 과목 횟수 제한으로 배치 불가";
+        if (subjectType === "specialist" && !afterExcluded) return "반별 시간표 전담 제외 칸 때문에 배치 불가";
+        if (subjectType === "specialist" && !afterAvailability) return "전담 O 가능 시간대 부족";
+        if (!afterConflict) return "동일 시간 전담 과목/담당 교사 중복 금지 충돌";
+        if (!afterConsecutive) return "전담 3연속 금지 규칙 충돌";
+        return `복합 제약으로 배치 불가(후보 ${afterConsecutive}/${candidateCount})`;
       }
 
       function clearAutoGeneratedEntriesForSubjects(subjects) {
@@ -1624,146 +1954,178 @@
       }
 
       async function runAutoGenerateFromSettings() {
-        const subjectInputs = Array.from(autoGenerateRows.querySelectorAll("[data-subject]"));
-        if (!subjectInputs.length) {
-          window.alert("전담 과목에서 체크된 항목이 없습니다. 전담 과목을 먼저 선택해 주세요.");
+        const subjectsInModal = Array.from(autoGenerateRows.querySelectorAll("[data-subject]")).map(
+          (input) => input.dataset.subject
+        );
+        if (!subjectsInModal.length) {
+          window.alert("전담/담임 과목에서 체크된 항목이 없습니다. 과목을 먼저 선택해 주세요.");
           return;
         }
 
         const targetCounts = {};
-        subjectInputs.forEach((input) => {
-          const subject = input.dataset.subject;
-          const parsed = Number(input.value);
+        subjectsInModal.forEach((subject) => {
+          const parsed = Number(autoGenerateSubjectCounts[subject]);
           const count = Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 0;
           targetCounts[subject] = count;
           autoGenerateSubjectCounts[subject] = count;
         });
-
-        clearAutoGeneratedEntriesForSubjects(Object.keys(targetCounts));
-
-        const shortages = {};
+        const subjectsToClear = Object.keys(targetCounts);
         const classes = buildClasses(classCount);
-        const shuffledClasses = [...classes].sort(() => Math.random() - 0.5);
+        const specialistSubjectsToAssign = Object.keys(targetCounts).filter((subject) => selectedSpecialists.has(subject));
+        const homeroomSubjectsToAssign = Object.keys(targetCounts).filter((subject) => selectedHomerooms.has(subject));
 
-        for (const className of shuffledClasses) {
-          const shuffledInputs = [...subjectInputs].sort(() => Math.random() - 0.5);
-          for (const input of shuffledInputs) {
-            const subject = input.dataset.subject;
-            const target = targetCounts[subject];
-            const assigned = countAssignedSubjectForClass(className, subject);
-            const subjectType = autoGenerateSubjectTypes[subject] || "specialist";
-            const seriesSize = getSeriesSize(subject);
-            let needed = Math.max(0, target - assigned);
+        const runSingleAttempt = async () => {
+          const specialistShortages = [];
+          const homeroomShortages = [];
+          const shuffledClasses = [...classes].sort(() => Math.random() - 0.5);
+          const prioritizeBySeries = (subjects) => {
+            const shuffled = [...subjects].sort(() => Math.random() - 0.5);
+            const seriesFirst = shuffled.filter((subject) => Boolean(getSeriesSize(subject)));
+            const normalLater = shuffled.filter((subject) => !getSeriesSize(subject));
+            return [...seriesFirst, ...normalLater];
+          };
+          const orderedSpecialistSubjects = prioritizeBySeries(specialistSubjectsToAssign);
+          const orderedHomeroomSubjects = prioritizeBySeries(homeroomSubjectsToAssign);
 
-            while (needed > 0) {
-              const bundleSize =
-                subjectType === "specialist" && subject !== "체육" ? Math.min(seriesSize, needed) : 1;
-              const bundle =
-                bundleSize > 1
-                  ? findRandomAutoAssignableBundle(className, subject, bundleSize, subjectType)
-                  : findRandomAutoAssignableSlot(className, subject, subjectType);
-              if (!bundle) {
-                shortages[subject] = (shortages[subject] || 0) + needed;
-                break;
-              }
+          for (const className of shuffledClasses) {
+            for (const subject of orderedSpecialistSubjects) {
+              const target = targetCounts[subject];
+              const assigned = countAssignedSubjectForClass(className, subject);
+              const seriesSize = getSeriesSize(subject);
+              let needed = Math.max(0, target - assigned);
 
-              let assignedCount = 0;
-              for (const slot of Array.isArray(bundle) ? bundle : [bundle]) {
-                const assignedOk = await assignEntryToClassCell(
-                  className,
-                  slot.day,
-                  slot.period,
-                  slot.entry,
-                  false,
-                  "auto"
-                );
-                if (!assignedOk) break;
-                assignedCount += 1;
+              while (needed > 0) {
+                if (seriesSize && needed < seriesSize) {
+                  specialistShortages.push({ className, subject, lack: needed, reason: "2연차시 조건 충돌" });
+                  break;
+                }
+                const bundleSize = seriesSize || 1;
+                const bundle = bundleSize > 1
+                  ? findRandomAutoAssignableBundle(className, subject, bundleSize, "specialist")
+                  : findRandomAutoAssignableSlot(className, subject, "specialist");
+                if (!bundle) {
+                  specialistShortages.push({
+                    className,
+                    subject,
+                    lack: needed,
+                    reason: explainAutoPlacementFailure(className, subject, "specialist", bundleSize)
+                  });
+                  break;
+                }
+
+                let assignedCount = 0;
+                for (const slot of Array.isArray(bundle) ? bundle : [bundle]) {
+                  const assignedOk = await assignEntryToClassCell(
+                    className,
+                    slot.day,
+                    slot.period,
+                    slot.entry,
+                    false,
+                    "auto"
+                  );
+                  if (!assignedOk) break;
+                  assignedCount += 1;
+                }
+                if (!assignedCount) {
+                  specialistShortages.push({
+                    className,
+                    subject,
+                    lack: needed,
+                    reason: explainAutoPlacementFailure(className, subject, "specialist", bundleSize)
+                  });
+                  break;
+                }
+                needed -= assignedCount;
               }
-              if (!assignedCount) {
-                shortages[subject] = (shortages[subject] || 0) + needed;
-                break;
-              }
-              needed -= assignedCount;
             }
           }
+
+          if (specialistShortages.length) return { specialistShortages, homeroomShortages };
+
+          for (const className of shuffledClasses) {
+            for (const subject of orderedHomeroomSubjects) {
+              const target = targetCounts[subject];
+              const assigned = countAssignedSubjectForClass(className, subject);
+              const seriesSize = getSeriesSize(subject);
+              let needed = Math.max(0, target - assigned);
+
+              while (needed > 0) {
+                if (seriesSize && needed < seriesSize) {
+                  homeroomShortages.push({ className, subject, lack: needed, reason: "2연차시 조건 충돌" });
+                  break;
+                }
+                const bundleSize = seriesSize || 1;
+                const bundle = bundleSize > 1
+                  ? findRandomAutoAssignableBundle(className, subject, bundleSize, "general")
+                  : findRandomAutoAssignableSlot(className, subject, "general");
+                if (!bundle) {
+                  homeroomShortages.push({
+                    className,
+                    subject,
+                    lack: needed,
+                    reason: explainAutoPlacementFailure(className, subject, "general", bundleSize)
+                  });
+                  break;
+                }
+
+                let assignedCount = 0;
+                for (const slot of Array.isArray(bundle) ? bundle : [bundle]) {
+                  const assignedOk = await assignEntryToClassCell(className, slot.day, slot.period, slot.entry, false, "auto");
+                  if (!assignedOk) break;
+                  assignedCount += 1;
+                }
+                if (!assignedCount) {
+                  homeroomShortages.push({
+                    className,
+                    subject,
+                    lack: needed,
+                    reason: explainAutoPlacementFailure(className, subject, "general", bundleSize)
+                  });
+                  break;
+                }
+                needed -= assignedCount;
+              }
+            }
+          }
+          return { specialistShortages, homeroomShortages };
+        };
+
+        const maxAttempts = 80;
+        let bestResult = null;
+        let bestSnapshot = null;
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+          clearAutoGeneratedEntriesForSubjects(subjectsToClear);
+          const attemptResult = await runSingleAttempt();
+          const totalShortage = attemptResult.specialistShortages.length + attemptResult.homeroomShortages.length;
+          if (!bestResult || totalShortage < bestResult.totalShortage) {
+            bestResult = { ...attemptResult, totalShortage, attempt };
+            bestSnapshot = JSON.parse(JSON.stringify(subjectStore));
+          }
+          if (!totalShortage) break;
+        }
+        if (bestSnapshot) {
+          Object.keys(subjectStore).forEach((key) => delete subjectStore[key]);
+          Object.assign(subjectStore, bestSnapshot);
         }
 
         closeAutoGenerateModal();
         renderTimetables();
 
-        const shortageEntries = Object.entries(shortages).filter(([, lack]) => lack > 0);
-        if (shortageEntries.length) {
-          const messageLines = shortageEntries.map(([subject, lack]) => `- ${subject}: ${lack}시수 부족`);
-          window.alert(`일부 과목은 요청 시수를 모두 배치하지 못했습니다.\n${messageLines.join("\n")}`);
+        const specialistShortages = bestResult?.specialistShortages || [];
+        const homeroomShortages = bestResult?.homeroomShortages || [];
+        if (specialistShortages.length || homeroomShortages.length) {
+          const allShortages = [...specialistShortages, ...homeroomShortages];
+          const details = allShortages
+            .slice(0, 18)
+            .map((item) => `- ${item.className} ${item.subject}: ${item.lack}시수 부족${item.reason ? ` (${item.reason})` : ""}`)
+            .join("\n");
+          const reasonHints = [
+            "가능 원인: 과목 수 초과, 배치 가능한 칸 부족, 2연차시 조건 충돌, 교사 충돌",
+            "해결 방법: 전담 가능시간(O) 확대, 마지막 교시 X 해제, 시수 축소, 교사 배정 조정"
+          ].join("\n");
+          window.alert(`자동 배치를 여러 번 반복했지만 모든 시수를 채우지 못했습니다.\n${reasonHints}\n${details}`);
         } else {
           window.alert("자동 시간표 생성이 완료되었습니다.");
-        }
-      }
-
-      function checkDuplicateConflicts() {
-        const classes = buildClasses(classCount);
-        const issues = [];
-
-        for (let period = 1; period <= maxPeriodCount; period += 1) {
-          for (const day of days) {
-            const specialistMap = new Map();
-            const pePlaceMap = new Map();
-            const teacherMap = new Map();
-
-            classes.forEach((className) => {
-              const entry = getEntry(className, day, period);
-              if (!entry) return;
-
-              if (isDisabledSlot(day, period)) {
-                issues.push(`${day} ${period}교시 ${className}: 비활성화(X) 칸에 과목이 배치됨`);
-              }
-
-              if (!isSpecialistSubject(entry.subject)) return;
-
-              const assignedTeacher = getAssignedTeacher(entry.subject);
-              if (assignedTeacher) {
-                if (!teacherMap.has(assignedTeacher)) teacherMap.set(assignedTeacher, []);
-                teacherMap.get(assignedTeacher).push(`${className}(${entry.subject})`);
-              }
-
-              if (entry.subject === "체육") {
-                const peKey = entry.pePlace || "미지정";
-                if (!pePlaceMap.has(peKey)) pePlaceMap.set(peKey, []);
-                pePlaceMap.get(peKey).push(className);
-                return;
-              }
-
-              if (!specialistMap.has(entry.subject)) specialistMap.set(entry.subject, []);
-              specialistMap.get(entry.subject).push(className);
-            });
-
-            specialistMap.forEach((classList, subject) => {
-              if (classList.length > 1) {
-                issues.push(`${day} ${period}교시 ${subject}: ${classList.join(", ")}`);
-              }
-            });
-
-            pePlaceMap.forEach((classList, pePlace) => {
-              if (classList.length > 1) {
-                issues.push(`${day} ${period}교시 체육(${pePlace}): ${classList.join(", ")}`);
-              }
-            });
-
-            teacherMap.forEach((assignments, teacher) => {
-              if (assignments.length > 1) {
-                issues.push(`${day} ${period}교시 ${teacher} 중복: ${assignments.join(", ")}`);
-              }
-            });
-          }
-        }
-
-        if (issues.length) {
-          const detail = issues.slice(0, 12).map((issue) => `- ${issue}`).join("\n");
-          const more = issues.length > 12 ? `\n... 외 ${issues.length - 12}건` : "";
-          window.alert(`중복이 있습니다.\n${detail}${more}`);
-        } else {
-          window.alert("중복이 없습니다.");
         }
       }
 
@@ -1840,8 +2202,13 @@
               const nextSubject = value.trim();
               if (!nextSubject) {
                 delete subjectStore[key];
-                specialistExcludedSlots.add(key);
-                cell.textContent = "전담제외";
+                if (specialistExcludedSlots.has(key)) {
+                  specialistExcludedSlots.delete(key);
+                  cell.textContent = "";
+                } else {
+                  specialistExcludedSlots.add(key);
+                  cell.textContent = "전담제외";
+                }
                 applySpecialistSlotColors();
                 renderSpecialistTimetables();
                 return;
@@ -1870,6 +2237,12 @@
               cell.addEventListener("keydown", (event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
+                  if (event.key === "Enter" && cell.textContent.trim()) {
+                    delete subjectStore[key];
+                    specialistExcludedSlots.delete(key);
+                    renderTimetables();
+                    return;
+                  }
                   editCell();
                 }
               });
@@ -1912,7 +2285,55 @@
         return assignments;
       }
 
-      async function applySpecialistDropdownSelection(tableName, day, period, selectedValue) {
+      function getPeAssignmentsByPlace(day, period) {
+        const assignments = getSpecialistAssignmentsAtSlot("체육", day, period);
+        const grouped = { gym: [], ground: [], other: [] };
+        assignments.forEach(({ className, entry }) => {
+          const classNumber = className.replace("반", "");
+          if (entry?.pePlace === "강당") grouped.gym.push(classNumber);
+          if (entry?.pePlace === "운동장") grouped.ground.push(classNumber);
+          if (entry?.pePlace === "그 외") grouped.other.push(classNumber);
+        });
+        return grouped;
+      }
+
+      function clearPeAssignmentsAtSlot(day, period) {
+        const assignments = getSpecialistAssignmentsAtSlot("체육", day, period);
+        if (!assignments.length) return false;
+        assignments.forEach(({ className }) => {
+          delete subjectStore[getCellKey(className, day, period)];
+        });
+        return true;
+      }
+
+      function clearSpecialistCellDisplayValue(tableName, day, period) {
+        if (tableName === "체육") {
+          const removedAssignment = clearPeAssignmentsAtSlot(day, period);
+          if (removedAssignment) return true;
+          const availability = getPeAvailability(day, period);
+          if (availability.gym || availability.ground || availability.other) {
+            setPeAvailability(day, period, { gym: false, ground: false, other: false });
+            return true;
+          }
+          return false;
+        }
+
+        const slotKey = getSpecialistSlotKey(tableName, day, period);
+        const assignments = getSpecialistAssignmentsAtSlot(tableName, day, period);
+        if (assignments.length) {
+          assignments.forEach(({ className }) => {
+            delete subjectStore[getCellKey(className, day, period)];
+          });
+          return true;
+        }
+        if (specialistAvailableSlots[slotKey]) {
+          delete specialistAvailableSlots[slotKey];
+          return true;
+        }
+        return false;
+      }
+
+      async function applySpecialistDropdownSelection(tableName, day, period, selectedValue, inputMethod = "menu") {
         const existingAssignments = getSpecialistAssignmentsAtSlot(tableName, day, period);
         const backup = existingAssignments.map((item) => ({
           key: getCellKey(item.className, day, period),
@@ -1929,15 +2350,6 @@
           return;
         }
 
-        if (selectedValue === "O") {
-          backup.forEach((item) => {
-            delete subjectStore[item.key];
-          });
-          specialistAvailableSlots[slotKey] = true;
-          renderTimetables();
-          return;
-        }
-
         const className = `${selectedValue}반`;
         let nextEntry = { subject: tableName };
         if (tableName === "체육") {
@@ -1949,6 +2361,23 @@
             return;
           }
           nextEntry = { subject: "체육", pePlace };
+          const duplicateByPlace = existingAssignments.some(
+            (item) => item.className !== className && item.entry?.pePlace === pePlace
+          );
+          if (duplicateByPlace) {
+            const proceed = await openConflictConfirm();
+            if (!proceed) {
+              renderTimetables();
+              return;
+            }
+          }
+          delete specialistAvailableSlots[slotKey];
+          if (!(await assignEntryToClassCell(className, day, period, nextEntry, true, "manual", true))) {
+            renderTimetables();
+            return;
+          }
+          renderTimetables();
+          return;
         }
 
         backup.forEach((item) => {
@@ -1967,17 +2396,28 @@
         renderTimetables();
       }
 
+      function toggleSpecialistAvailabilitySlot(tableName, day, period) {
+        const slotKey = getSpecialistSlotKey(tableName, day, period);
+        const existingAssignments = getSpecialistAssignmentsAtSlot(tableName, day, period);
+        existingAssignments.forEach((item) => {
+          delete subjectStore[getCellKey(item.className, day, period)];
+        });
+        if (specialistAvailableSlots[slotKey]) {
+          delete specialistAvailableSlots[slotKey];
+        } else {
+          specialistAvailableSlots[slotKey] = true;
+        }
+        renderTimetables();
+      }
+
       function applyPeAvailabilitySelection(day, period, mode) {
         const current = getPeAvailability(day, period);
-        if (mode === "clear") {
-          setPeAvailability(day, period, { gym: false, ground: false });
-        } else if (mode === "gym") {
-          setPeAvailability(day, period, { gym: !current.gym, ground: current.ground });
+        if (mode === "gym") {
+          setPeAvailability(day, period, { gym: !current.gym, ground: current.ground, other: current.other });
         } else if (mode === "ground") {
-          setPeAvailability(day, period, { gym: current.gym, ground: !current.ground });
-        } else if (mode === "both") {
-          const allEnabled = current.gym && current.ground;
-          setPeAvailability(day, period, { gym: !allEnabled, ground: !allEnabled });
+          setPeAvailability(day, period, { gym: current.gym, ground: !current.ground, other: current.other });
+        } else if (mode === "other") {
+          setPeAvailability(day, period, { gym: current.gym, ground: current.ground, other: !current.other });
         }
         renderTimetables();
       }
@@ -1992,22 +2432,22 @@
           const clearButton = document.createElement("button");
           clearButton.type = "button";
           clearButton.className = "class-select-option";
-          clearButton.textContent = "비우기";
+          clearButton.textContent = "X";
           clearButton.addEventListener("click", async (event) => {
             event.stopPropagation();
             await onSelect("");
           });
           menu.appendChild(clearButton);
 
-          const openSlotButton = document.createElement("button");
-          openSlotButton.type = "button";
-          openSlotButton.className = "class-select-option";
-          openSlotButton.textContent = "O (가능 시간)";
-          openSlotButton.addEventListener("click", async (event) => {
+          const openButton = document.createElement("button");
+          openButton.type = "button";
+          openButton.className = "class-select-option";
+          openButton.textContent = "O";
+          openButton.addEventListener("click", (event) => {
             event.stopPropagation();
-            await onSelect("O");
+            toggleSpecialistAvailabilitySlot(tableName, day, period);
           });
-          menu.appendChild(openSlotButton);
+          menu.appendChild(openButton);
 
           for (let number = 1; number <= classCount; number += 1) {
             const option = document.createElement("button");
@@ -2023,20 +2463,14 @@
         };
 
         if (tableName === "체육") {
-          const clearButton = document.createElement("button");
-          clearButton.type = "button";
-          clearButton.className = "class-select-option";
-          clearButton.textContent = "비우기";
-          clearButton.addEventListener("click", (event) => {
-            event.stopPropagation();
-            applyPeAvailabilitySelection(day, period, "clear");
-          });
-          menu.appendChild(clearButton);
+          menu.classList.add("pe-quick-menu");
+          const peAvailability = getPeAvailability(day, period);
 
           const gymButton = document.createElement("button");
           gymButton.type = "button";
-          gymButton.className = "class-select-option";
-          gymButton.textContent = "강당 배치 가능 토글";
+          gymButton.className = `pe-quick-btn gym${peAvailability.gym ? "" : " inactive"}`;
+          gymButton.textContent = "강";
+          gymButton.title = "강당 가능 토글";
           gymButton.addEventListener("click", (event) => {
             event.stopPropagation();
             applyPeAvailabilitySelection(day, period, "gym");
@@ -2045,23 +2479,25 @@
 
           const groundButton = document.createElement("button");
           groundButton.type = "button";
-          groundButton.className = "class-select-option";
-          groundButton.textContent = "운동장 배치 가능 토글";
+          groundButton.className = `pe-quick-btn ground${peAvailability.ground ? "" : " inactive"}`;
+          groundButton.textContent = "운";
+          groundButton.title = "운동장 가능 토글";
           groundButton.addEventListener("click", (event) => {
             event.stopPropagation();
             applyPeAvailabilitySelection(day, period, "ground");
           });
           menu.appendChild(groundButton);
 
-          const bothButton = document.createElement("button");
-          bothButton.type = "button";
-          bothButton.className = "class-select-option";
-          bothButton.textContent = "강당+운동장 동시 가능 토글";
-          bothButton.addEventListener("click", (event) => {
+          const otherButton = document.createElement("button");
+          otherButton.type = "button";
+          otherButton.className = `pe-quick-btn other${peAvailability.other ? "" : " inactive"}`;
+          otherButton.textContent = "외";
+          otherButton.title = "그 외 가능 토글";
+          otherButton.addEventListener("click", (event) => {
             event.stopPropagation();
-            applyPeAvailabilitySelection(day, period, "both");
+            applyPeAvailabilitySelection(day, period, "other");
           });
-          menu.appendChild(bothButton);
+          menu.appendChild(otherButton);
         } else {
           renderOptions(async (classNumber) => {
             await applySpecialistDropdownSelection(tableName, day, period, classNumber);
@@ -2069,12 +2505,33 @@
         }
 
         cell.appendChild(menu);
+        menu.setAttribute("tabindex", "0");
+        menu.focus();
+        menu.addEventListener("keydown", (event) => {
+          if (/^\d$/.test(event.key)) {
+            const classNumber = Number(event.key);
+            if (classNumber >= 1 && classNumber <= classCount) {
+              event.preventDefault();
+              event.stopPropagation();
+              applySpecialistDropdownSelection(tableName, day, period, String(classNumber), "keyboard");
+            }
+            return;
+          }
+          if (tableName !== "체육") {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            event.stopPropagation();
+            toggleSpecialistAvailabilitySlot(tableName, day, period);
+          }
+        });
       }
 
-      function renderSpecialistOptions() {
-        subjectOptions.innerHTML = "";
+      function renderSpecialistOptions(targetContainer, selectedSet, oppositeSet) {
+        targetContainer.innerHTML = "";
 
         specialistSubjects.forEach((subject) => {
+          if (subject.name === PE_SUBJECT) return;
+          if (!selectedSet.has(subject.name) && oppositeSet.has(subject.name)) return;
           const label = document.createElement("label");
           label.className = "subject-option";
           label.style.backgroundColor = subject.color;
@@ -2082,23 +2539,26 @@
           const checkbox = document.createElement("input");
           checkbox.type = "checkbox";
           checkbox.value = subject.name;
-          checkbox.checked = selectedSpecialists.has(subject.name);
+          checkbox.checked = selectedSet.has(subject.name);
 
           checkbox.addEventListener("change", () => {
             if (checkbox.checked) {
-              selectedSpecialists.add(subject.name);
+              selectedSet.add(subject.name);
+              oppositeSet.delete(subject.name);
             } else {
-              selectedSpecialists.delete(subject.name);
+              selectedSet.delete(subject.name);
             }
             applySpecialistSlotColors();
             renderSpecialistTimetables();
+            renderSpecialistOptions(subjectOptions, selectedSpecialists, selectedHomerooms);
+            renderSpecialistOptions(homeroomOptions, selectedHomerooms, selectedSpecialists);
           });
 
           const text = document.createElement("span");
           text.textContent = subject.name;
 
           label.append(checkbox, text);
-          subjectOptions.appendChild(label);
+          targetContainer.appendChild(label);
         });
       }
 
@@ -2106,12 +2566,27 @@
         specialistToggle.addEventListener("click", () => {
           const open = specialistMenu.classList.toggle("open");
           specialistToggle.setAttribute("aria-expanded", String(open));
+          if (open) {
+            homeroomMenu.classList.remove("open");
+            homeroomToggle.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        homeroomToggle.addEventListener("click", () => {
+          const open = homeroomMenu.classList.toggle("open");
+          homeroomToggle.setAttribute("aria-expanded", String(open));
+          if (open) {
+            specialistMenu.classList.remove("open");
+            specialistToggle.setAttribute("aria-expanded", "false");
+          }
         });
 
         document.addEventListener("click", (event) => {
           if (!event.target.closest(".specialist-picker")) {
             specialistMenu.classList.remove("open");
             specialistToggle.setAttribute("aria-expanded", "false");
+            homeroomMenu.classList.remove("open");
+            homeroomToggle.setAttribute("aria-expanded", "false");
           }
         });
       }
@@ -2175,12 +2650,6 @@
         });
       }
 
-      function setupDuplicateCheck() {
-        checkDuplicateBtn.addEventListener("click", () => {
-          checkDuplicateConflicts();
-        });
-      }
-
       function setupSpecialistCellMenuClose() {
         document.addEventListener("click", (event) => {
           if (event.target.closest(".class-select-menu")) return;
@@ -2206,9 +2675,10 @@
       setupPePicker();
       setupConflictConfirmModal();
       setupAutoGenerate();
-      setupDuplicateCheck();
       setupSpecialistCellMenuClose();
-      renderSpecialistOptions();
+      selectedSpecialists.add(PE_SUBJECT);
+      renderSpecialistOptions(subjectOptions, selectedSpecialists, selectedHomerooms);
+      renderSpecialistOptions(homeroomOptions, selectedHomerooms, selectedSpecialists);
       renderTimetables();
       </script>
   </body>
