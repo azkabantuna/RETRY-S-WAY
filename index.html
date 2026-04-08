@@ -304,6 +304,10 @@
         background: #c4b5fd;
       }
 
+      .pe-picker-actions .other-btn {
+        background: #f9a8d4;
+      }
+
       .pe-picker-cancel {
         margin-top: 8px;
         width: 100%;
@@ -372,6 +376,10 @@
         display: none;
       }
 
+      .custom-hour-input {
+        display: none;
+      }
+
       .auto-field {
         display: grid;
         gap: 2px;
@@ -381,6 +389,15 @@
         font-size: 0.72rem;
         color: #6b7280;
         font-weight: 700;
+      }
+
+      .auto-specialist-label {
+        color: #7c3aed;
+      }
+
+      .auto-subject-divider {
+        border-top: 1px dashed #c4b5fd;
+        margin: 8px 0 10px;
       }
 
       .auto-specialist-label {
@@ -475,6 +492,41 @@
         padding: 7px 8px;
         text-align: left;
         cursor: pointer;
+      }
+
+      .pe-quick-menu {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+        min-width: 186px;
+        max-height: none;
+        overflow: visible;
+      }
+
+      .pe-quick-btn {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 7px 6px;
+        font-weight: 800;
+        cursor: pointer;
+        color: #111827;
+      }
+
+      .pe-quick-btn.gym {
+        background: #86efac;
+      }
+
+      .pe-quick-btn.ground {
+        background: #c4b5fd;
+      }
+
+      .pe-quick-btn.other {
+        background: #f9a8d4;
+      }
+
+      .pe-quick-btn.inactive {
+        opacity: 0.35;
       }
 
       .pe-quick-menu {
@@ -760,6 +812,10 @@
         overflow: visible;
       }
 
+      .specialist-card td {
+        overflow: visible;
+      }
+
       .conflict-modal {
         position: fixed;
         inset: 0;
@@ -923,6 +979,7 @@
         <div class="pe-picker-actions">
           <button type="button" class="gym-btn" data-pe-place="강당">강당</button>
           <button type="button" class="ground-btn" data-pe-place="운동장">운동장</button>
+          <button type="button" class="other-btn" data-pe-place="그 외">그 외</button>
         </div>
         <button type="button" id="pePickerCancel" class="pe-picker-cancel">취소</button>
       </div>
@@ -1053,7 +1110,8 @@
       );
       const pePlaceColorMap = {
         강당: "#86efac",
-        운동장: "#c4b5fd"
+        운동장: "#c4b5fd",
+        "그 외": "#f9a8d4"
       };
       let pePickerResolver = null;
       let conflictConfirmResolver = null;
@@ -1105,20 +1163,22 @@
       }
 
       function getDailySubjectLimit(subject) {
+        if (subject === PE_SUBJECT) return 1;
         return getSeriesMode(subject) === "impossible" ? 1 : 2;
       }
 
       function getPeAvailability(day, period) {
-        return peAvailableSlots[getPeSlotKey(day, period)] || { gym: false, ground: false };
+        return peAvailableSlots[getPeSlotKey(day, period)] || { gym: false, ground: false, other: false };
       }
 
       function setPeAvailability(day, period, nextState) {
         const key = getPeSlotKey(day, period);
         const normalized = {
           gym: Boolean(nextState?.gym),
-          ground: Boolean(nextState?.ground)
+          ground: Boolean(nextState?.ground),
+          other: Boolean(nextState?.other)
         };
-        if (!normalized.gym && !normalized.ground) {
+        if (!normalized.gym && !normalized.ground && !normalized.other) {
           delete peAvailableSlots[key];
         } else {
           peAvailableSlots[key] = normalized;
@@ -1144,7 +1204,9 @@
       function getRestrictionText(entry) {
         if (!entry) return "";
         if (entry.subject === "체육" && entry.pePlace) {
-          return entry.pePlace === "강당" ? "체강X" : "체운X";
+          if (entry.pePlace === "강당") return "체강X";
+          if (entry.pePlace === "운동장") return "체운X";
+          return "체외X";
         }
         if (entry.subject.startsWith("강사")) {
           const instructorNumber = entry.subject.replace("강사", "");
@@ -1530,6 +1592,9 @@
                 if (peAssignments.ground.length) {
                   assignmentLabels.push(`운${peAssignments.ground.join(",")}`);
                 }
+                if (peAssignments.other.length) {
+                  assignmentLabels.push(`외${peAssignments.other.join(",")}`);
+                }
                 if (assignmentLabels.length) {
                   td.style.backgroundImage = "";
                   td.style.background = "#e5e7eb";
@@ -1551,6 +1616,10 @@
                 if (peAvailability.ground) {
                   peLabels.push("운O");
                   colors.push(pePlaceColorMap["운동장"]);
+                }
+                if (peAvailability.other) {
+                  peLabels.push("외O");
+                  colors.push(pePlaceColorMap["그 외"]);
                 }
                 if (colors.length > 1) {
                   td.style.backgroundImage = buildMultiColorGradient(colors);
@@ -1598,11 +1667,11 @@
                 editSpecialistCell(td, tableName, day, period);
               });
               td.addEventListener("keydown", (event) => {
-                if (/^\d$/.test(event.key) && tableName !== "체육") {
+                if (/^\d$/.test(event.key)) {
                   const classNumber = Number(event.key);
                   if (classNumber >= 1 && classNumber <= classCount) {
                     event.preventDefault();
-                    applySpecialistDropdownSelection(tableName, day, period, String(classNumber));
+                    applySpecialistDropdownSelection(tableName, day, period, String(classNumber), "keyboard");
                   }
                   return;
                 }
@@ -1881,7 +1950,8 @@
           const peAvailability = getPeAvailability(day, period);
           if (pePlace === "강당") return peAvailability.gym;
           if (pePlace === "운동장") return peAvailability.ground;
-          return peAvailability.gym || peAvailability.ground;
+          if (pePlace === "그 외") return peAvailability.other;
+          return peAvailability.gym || peAvailability.ground || peAvailability.other;
         }
         const hasAnyAvailability = Object.keys(specialistAvailableSlots).some((key) =>
           key.startsWith(`${subject}__`)
@@ -1930,6 +2000,18 @@
         return count;
       }
 
+      function hasPePlaceAssignedForClass(className, pePlace) {
+        for (let period = 1; period <= maxPeriodCount; period += 1) {
+          for (const day of days) {
+            const entry = getEntry(className, day, period);
+            if (entry?.subject === PE_SUBJECT && entry.pePlace === pePlace) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
       function findRandomAutoAssignableSlot(className, subject, subjectType = "specialist") {
         const candidates = [];
         const specialistType = subjectType === "specialist";
@@ -1946,11 +2028,12 @@
             if (!specialistType && !canPlaceHomeroomSubjectAt(className, day, period, subject)) continue;
 
             if (subject === "체육") {
-              const orderedPePlaces = ["강당", "운동장"].sort(
+              const orderedPePlaces = ["강당", "운동장", "그 외"].sort(
                 (a, b) =>
                   getPePlaceAssignCountForClass(className, a) - getPePlaceAssignCountForClass(className, b)
               );
               for (const pePlace of orderedPePlaces) {
+                if (hasPePlaceAssignedForClass(className, pePlace)) continue;
                 const candidate = { subject: "체육", pePlace };
                 if (specialistType && !isSpecialistSlotAllowedByAvailability(subject, day, period, pePlace)) continue;
                 if (!specialistType || !hasSpecialistConflict(className, day, period, candidate, false)) {
@@ -2029,6 +2112,60 @@
         return candidates[Math.floor(Math.random() * candidates.length)];
       }
 
+      function explainAutoPlacementFailure(className, subject, subjectType = "specialist", bundleSize = 1) {
+        if (bundleSize > 1) {
+          return "연차시 조건 충돌(연속 가능한 시간대 부족)";
+        }
+        if (subject === PE_SUBJECT) {
+          const allPePlacesUsed = ["강당", "운동장", "그 외"].every((pePlace) =>
+            hasPePlaceAssignedForClass(className, pePlace)
+          );
+          if (allPePlacesUsed) {
+            return "같은 공간 체육 중복 금지 규칙으로 배치 불가";
+          }
+        }
+
+        let candidateCount = 0;
+        let afterDisabled = 0;
+        let afterOccupied = 0;
+        let afterExcluded = 0;
+        let afterAvailability = 0;
+        let afterDaily = 0;
+        let afterConflict = 0;
+        let afterConsecutive = 0;
+
+        for (let period = 1; period <= maxPeriodCount; period += 1) {
+          for (const day of days) {
+            candidateCount += 1;
+            if (isDisabledSlot(day, period)) continue;
+            afterDisabled += 1;
+            if (getEntry(className, day, period)) continue;
+            afterOccupied += 1;
+            if (countSubjectOnDayForClass(className, day, subject) >= getDailySubjectLimit(subject)) continue;
+            afterDaily += 1;
+            if (subjectType === "specialist" && specialistExcludedSlots.has(getCellKey(className, day, period))) continue;
+            afterExcluded += 1;
+            if (subjectType === "specialist" && !isSpecialistSlotAllowedByAvailability(subject, day, period)) continue;
+            afterAvailability += 1;
+            if (subjectType !== "specialist" && !canPlaceHomeroomSubjectAt(className, day, period, subject)) continue;
+            const nextEntry = { subject };
+            if (subjectType === "specialist" && hasSpecialistConflict(className, day, period, nextEntry, false)) continue;
+            afterConflict += 1;
+            if (subjectType === "specialist" && wouldCreateThreeConsecutiveSpecialists(className, day, period, nextEntry)) continue;
+            afterConsecutive += 1;
+          }
+        }
+
+        if (!afterDisabled) return "마지막 교시 X 등 비활성 슬롯으로 배치 칸 부족";
+        if (!afterOccupied) return "수동 확정값/기존 배치로 빈칸 부족";
+        if (!afterDaily) return "같은 날 동일 과목 횟수 제한으로 배치 불가";
+        if (subjectType === "specialist" && !afterExcluded) return "반별 시간표 전담 제외 칸 때문에 배치 불가";
+        if (subjectType === "specialist" && !afterAvailability) return "전담 O 가능 시간대 부족";
+        if (!afterConflict) return "동일 시간 전담 과목/담당 교사 중복 금지 충돌";
+        if (!afterConsecutive) return "전담 3연속 금지 규칙 충돌";
+        return `복합 제약으로 배치 불가(후보 ${afterConsecutive}/${candidateCount})`;
+      }
+
       function clearAutoGeneratedEntriesForSubjects(subjects) {
         const subjectSet = new Set(subjects);
         Object.keys(subjectStore).forEach((key) => {
@@ -2085,7 +2222,12 @@
                   ? findRandomAutoAssignableBundle(className, subject, bundleSize, "specialist")
                   : findRandomAutoAssignableSlot(className, subject, "specialist");
                 if (!bundle) {
-                  specialistShortages.push({ className, subject, lack: needed });
+                  specialistShortages.push({
+                    className,
+                    subject,
+                    lack: needed,
+                    reason: explainAutoPlacementFailure(className, subject, "specialist", bundleSize)
+                  });
                   break;
                 }
 
@@ -2103,7 +2245,12 @@
                   assignedCount += 1;
                 }
                 if (!assignedCount) {
-                  specialistShortages.push({ className, subject, lack: needed });
+                  specialistShortages.push({
+                    className,
+                    subject,
+                    lack: needed,
+                    reason: explainAutoPlacementFailure(className, subject, "specialist", bundleSize)
+                  });
                   break;
                 }
                 needed -= assignedCount;
@@ -2131,7 +2278,12 @@
                   ? findRandomAutoAssignableBundle(className, subject, bundleSize, "general")
                   : findRandomAutoAssignableSlot(className, subject, "general");
                 if (!bundle) {
-                  homeroomShortages.push({ className, subject, lack: needed });
+                  homeroomShortages.push({
+                    className,
+                    subject,
+                    lack: needed,
+                    reason: explainAutoPlacementFailure(className, subject, "general", bundleSize)
+                  });
                   break;
                 }
 
@@ -2142,7 +2294,12 @@
                   assignedCount += 1;
                 }
                 if (!assignedCount) {
-                  homeroomShortages.push({ className, subject, lack: needed });
+                  homeroomShortages.push({
+                    className,
+                    subject,
+                    lack: needed,
+                    reason: explainAutoPlacementFailure(className, subject, "general", bundleSize)
+                  });
                   break;
                 }
                 needed -= assignedCount;
@@ -2349,11 +2506,12 @@
 
       function getPeAssignmentsByPlace(day, period) {
         const assignments = getSpecialistAssignmentsAtSlot("체육", day, period);
-        const grouped = { gym: [], ground: [] };
+        const grouped = { gym: [], ground: [], other: [] };
         assignments.forEach(({ className, entry }) => {
           const classNumber = className.replace("반", "");
           if (entry?.pePlace === "강당") grouped.gym.push(classNumber);
           if (entry?.pePlace === "운동장") grouped.ground.push(classNumber);
+          if (entry?.pePlace === "그 외") grouped.other.push(classNumber);
         });
         return grouped;
       }
@@ -2372,8 +2530,8 @@
           const removedAssignment = clearPeAssignmentsAtSlot(day, period);
           if (removedAssignment) return true;
           const availability = getPeAvailability(day, period);
-          if (availability.gym || availability.ground) {
-            setPeAvailability(day, period, { gym: false, ground: false });
+          if (availability.gym || availability.ground || availability.other) {
+            setPeAvailability(day, period, { gym: false, ground: false, other: false });
             return true;
           }
           return false;
@@ -2394,7 +2552,7 @@
         return false;
       }
 
-      async function applySpecialistDropdownSelection(tableName, day, period, selectedValue) {
+      async function applySpecialistDropdownSelection(tableName, day, period, selectedValue, inputMethod = "menu") {
         const existingAssignments = getSpecialistAssignmentsAtSlot(tableName, day, period);
         const backup = existingAssignments.map((item) => ({
           key: getCellKey(item.className, day, period),
@@ -2422,6 +2580,23 @@
             return;
           }
           nextEntry = { subject: "체육", pePlace };
+          const duplicateByPlace = existingAssignments.some(
+            (item) => item.className !== className && item.entry?.pePlace === pePlace
+          );
+          if (duplicateByPlace) {
+            const proceed = await openConflictConfirm();
+            if (!proceed) {
+              renderTimetables();
+              return;
+            }
+          }
+          delete specialistAvailableSlots[slotKey];
+          if (!(await assignEntryToClassCell(className, day, period, nextEntry, true, "manual", true))) {
+            renderTimetables();
+            return;
+          }
+          renderTimetables();
+          return;
         }
 
         backup.forEach((item) => {
@@ -2457,9 +2632,11 @@
       function applyPeAvailabilitySelection(day, period, mode) {
         const current = getPeAvailability(day, period);
         if (mode === "gym") {
-          setPeAvailability(day, period, { gym: !current.gym, ground: current.ground });
+          setPeAvailability(day, period, { gym: !current.gym, ground: current.ground, other: current.other });
         } else if (mode === "ground") {
-          setPeAvailability(day, period, { gym: current.gym, ground: !current.ground });
+          setPeAvailability(day, period, { gym: current.gym, ground: !current.ground, other: current.other });
+        } else if (mode === "other") {
+          setPeAvailability(day, period, { gym: current.gym, ground: current.ground, other: !current.other });
         }
         renderTimetables();
       }
@@ -2480,6 +2657,16 @@
             await onSelect("");
           });
           menu.appendChild(clearButton);
+
+          const openButton = document.createElement("button");
+          openButton.type = "button";
+          openButton.className = "class-select-option";
+          openButton.textContent = "O";
+          openButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            toggleSpecialistAvailabilitySlot(tableName, day, period);
+          });
+          menu.appendChild(openButton);
 
           for (let number = 1; number <= classCount; number += 1) {
             const option = document.createElement("button");
@@ -2519,6 +2706,17 @@
             applyPeAvailabilitySelection(day, period, "ground");
           });
           menu.appendChild(groundButton);
+
+          const otherButton = document.createElement("button");
+          otherButton.type = "button";
+          otherButton.className = `pe-quick-btn other${peAvailability.other ? "" : " inactive"}`;
+          otherButton.textContent = "외";
+          otherButton.title = "그 외 가능 토글";
+          otherButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            applyPeAvailabilitySelection(day, period, "other");
+          });
+          menu.appendChild(otherButton);
         } else {
           renderOptions(async (classNumber) => {
             await applySpecialistDropdownSelection(tableName, day, period, classNumber);
@@ -2526,16 +2724,25 @@
         }
 
         cell.appendChild(menu);
-        if (tableName !== "체육") {
-          menu.setAttribute("tabindex", "0");
-          menu.focus();
-          menu.addEventListener("keydown", (event) => {
+        menu.setAttribute("tabindex", "0");
+        menu.focus();
+        menu.addEventListener("keydown", (event) => {
+          if (tableName === "체육" && /^\d$/.test(event.key)) {
+            const classNumber = Number(event.key);
+            if (classNumber >= 1 && classNumber <= classCount) {
+              event.preventDefault();
+              event.stopPropagation();
+              applySpecialistDropdownSelection(tableName, day, period, String(classNumber), "keyboard");
+            }
+            return;
+          }
+          if (tableName !== "체육") {
             if (event.key !== "Enter") return;
             event.preventDefault();
             event.stopPropagation();
             toggleSpecialistAvailabilitySlot(tableName, day, period);
-          });
-        }
+          }
+        });
       }
 
       function renderSpecialistOptions(targetContainer, selectedSet, oppositeSet) {
