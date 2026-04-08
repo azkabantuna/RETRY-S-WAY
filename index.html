@@ -473,6 +473,62 @@
         opacity: 0.35;
       }
 
+      .pe-quick-menu {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+      }
+
+      .pe-quick-btn {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 7px 6px;
+        font-weight: 800;
+        cursor: pointer;
+        color: #111827;
+      }
+
+      .pe-quick-btn.gym {
+        background: #86efac;
+      }
+
+      .pe-quick-btn.ground {
+        background: #c4b5fd;
+      }
+
+      .pe-quick-btn.inactive {
+        opacity: 0.35;
+      }
+
+      .pe-quick-menu {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+      }
+
+      .pe-quick-btn {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 7px 6px;
+        font-weight: 800;
+        cursor: pointer;
+        color: #111827;
+      }
+
+      .pe-quick-btn.gym {
+        background: #86efac;
+      }
+
+      .pe-quick-btn.ground {
+        background: #c4b5fd;
+      }
+
+      .pe-quick-btn.inactive {
+        opacity: 0.35;
+      }
+
       .class-select-section-title {
         padding: 6px 8px;
         font-size: 0.75rem;
@@ -1801,6 +1857,36 @@
                 break;
               }
               needed -= assignedCount;
+            }
+          }
+        }
+
+        for (const className of shuffledClasses) {
+          const shuffledHomerooms = [...homeroomSubjectsToAssign].sort(() => Math.random() - 0.5);
+          for (const subject of shuffledHomerooms) {
+            const target = targetCounts[subject];
+            const assigned = countAssignedSubjectForClass(className, subject);
+            let needed = Math.max(0, target - assigned);
+
+            while (needed > 0) {
+              const slot = findRandomAutoAssignableSlot(className, subject, "general");
+              if (!slot) {
+                shortages[subject] = (shortages[subject] || 0) + needed;
+                break;
+              }
+              const assignedOk = await assignEntryToClassCell(
+                className,
+                slot.day,
+                slot.period,
+                slot.entry,
+                false,
+                "auto"
+              );
+              if (!assignedOk) {
+                shortages[subject] = (shortages[subject] || 0) + needed;
+                break;
+              }
+              needed -= 1;
             }
           }
         }
