@@ -375,6 +375,15 @@
         font-weight: 700;
       }
 
+      .auto-specialist-label {
+        color: #7c3aed;
+      }
+
+      .auto-subject-divider {
+        border-top: 1px dashed #c4b5fd;
+        margin: 8px 0 10px;
+      }
+
       .teacher-picker {
         position: relative;
       }
@@ -440,6 +449,37 @@
         padding: 7px 8px;
         text-align: left;
         cursor: pointer;
+      }
+
+      .pe-quick-menu {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+        min-width: 134px;
+        max-height: none;
+        overflow: visible;
+      }
+
+      .pe-quick-btn {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 7px 6px;
+        font-weight: 800;
+        cursor: pointer;
+        color: #111827;
+      }
+
+      .pe-quick-btn.gym {
+        background: #86efac;
+      }
+
+      .pe-quick-btn.ground {
+        background: #c4b5fd;
+      }
+
+      .pe-quick-btn.inactive {
+        opacity: 0.35;
       }
 
       .pe-quick-menu {
@@ -613,6 +653,10 @@
         background: #fff;
         border: 1px solid var(--line);
         border-radius: 10px;
+        overflow: visible;
+      }
+
+      .specialist-card td {
         overflow: visible;
       }
 
@@ -956,8 +1000,9 @@
       }
 
       function getSeriesSize(subject) {
-        const value = Number(autoGenerateSubjectSeries[subject] ?? 1);
-        return Number.isFinite(value) && value >= 1 ? Math.min(5, Math.floor(value)) : 1;
+        const value = String(autoGenerateSubjectSeries[subject] ?? "free");
+        if (value === "2" || value === "3") return Number(value);
+        return null;
       }
 
       function getPeAvailability(day, period) {
@@ -1100,15 +1145,17 @@
       function openAutoGenerateModal() {
         const specialistList = Array.from(selectedSpecialists);
         const homeroomList = Array.from(selectedHomerooms).filter((subject) => !selectedSpecialists.has(subject));
-        const subjects = [...specialistList, ...homeroomList];
         autoGenerateRows.innerHTML = "";
 
-        subjects.forEach((subject) => {
+        const renderRow = (subject, subjectGroup) => {
           const row = document.createElement("div");
           row.className = "auto-row";
 
           const label = document.createElement("label");
           label.textContent = subject;
+          if (subjectGroup === "specialist") {
+            label.classList.add("auto-specialist-label");
+          }
 
           const hourField = document.createElement("div");
           hourField.className = "auto-field";
@@ -1142,13 +1189,14 @@
           const teacherToggle = document.createElement("button");
           teacherToggle.type = "button";
           teacherToggle.className = "teacher-toggle";
+          const defaultTeacher = subjectGroup === "specialist" ? "A교사" : "담임";
           if (!subjectTeacherAssignments[subject]) {
-            subjectTeacherAssignments[subject] = "담임";
+            subjectTeacherAssignments[subject] = defaultTeacher;
           }
-          teacherToggle.textContent = getAssignedTeacher(subject) || "담임";
+          teacherToggle.textContent = getAssignedTeacher(subject) || defaultTeacher;
           const teacherMenu = document.createElement("div");
           teacherMenu.className = "teacher-menu";
-          ["담임", "전담1", "전담2", "전담3", "강사1", "강사2"].forEach((teacherName) => {
+          ["담임", "A교사", "B교사", "C교사", "D강사", "E강사"].forEach((teacherName) => {
             const option = document.createElement("button");
             option.type = "button";
             option.className = "teacher-option";
@@ -1173,21 +1221,33 @@
           seriesTitle.textContent = "연차시";
           const seriesSelect = document.createElement("select");
           seriesSelect.dataset.subjectSeries = subject;
-          for (let series = 1; series <= 5; series += 1) {
+          [
+            { value: "free", text: "무관" },
+            { value: "2", text: "2" },
+            { value: "3", text: "3" }
+          ].forEach((series) => {
             const option = document.createElement("option");
-            option.value = String(series);
-            option.textContent = `${series}`;
+            option.value = series.value;
+            option.textContent = series.text;
             seriesSelect.appendChild(option);
-          }
-          seriesSelect.value = String(getSeriesSize(subject));
+          });
+          seriesSelect.value = String(autoGenerateSubjectSeries[subject] ?? "free");
           seriesSelect.addEventListener("change", () => {
-            autoGenerateSubjectSeries[subject] = Number(seriesSelect.value) || 1;
+            autoGenerateSubjectSeries[subject] = seriesSelect.value || "free";
           });
           seriesField.append(seriesTitle, seriesSelect);
 
           row.append(label, hourField, teacherField, seriesField);
           autoGenerateRows.appendChild(row);
-        });
+        };
+
+        specialistList.forEach((subject) => renderRow(subject, "specialist"));
+        if (specialistList.length && homeroomList.length) {
+          const divider = document.createElement("div");
+          divider.className = "auto-subject-divider";
+          autoGenerateRows.appendChild(divider);
+        }
+        homeroomList.forEach((subject) => renderRow(subject, "homeroom"));
 
         renderLastPeriodToggleRow();
         autoGenerateModal.classList.add("open");
@@ -1524,6 +1584,16 @@
 
       function getSpecialistConflictMessage(targetClass, day, period, nextEntry) {
         if (!isSpecialistSubject(nextEntry.subject)) return false;
+        const existingTargetEntry = getEntry(targetClass, day, period);
+        if (
+          existingTargetEntry &&
+          isSpecialistSubject(existingTargetEntry.subject) &&
+          (existingTargetEntry.subject !== nextEntry.subject || existingTargetEntry.pePlace !== nextEntry.pePlace)
+        ) {
+          return `${targetClass} ${day} ${period}교시에는 이미 ${getEntryDisplayText(
+            existingTargetEntry
+          )}이(가) 배치되어 있습니다.`;
+        }
 
         const classes = buildClasses(classCount);
 
@@ -1687,6 +1757,19 @@
         return true;
       }
 
+      function getPePlaceAssignCountForClass(className, pePlace) {
+        let count = 0;
+        for (let period = 1; period <= maxPeriodCount; period += 1) {
+          for (const day of days) {
+            const entry = getEntry(className, day, period);
+            if (entry?.subject === "체육" && entry.pePlace === pePlace) {
+              count += 1;
+            }
+          }
+        }
+        return count;
+      }
+
       function findRandomAutoAssignableSlot(className, subject, subjectType = "specialist") {
         const candidates = [];
         const specialistType = subjectType === "specialist";
@@ -1702,7 +1785,11 @@
             if (!specialistType && !canPlaceHomeroomSubjectAt(className, day, period, subject)) continue;
 
             if (subject === "체육") {
-              for (const pePlace of ["강당", "운동장"]) {
+              const orderedPePlaces = ["강당", "운동장"].sort(
+                (a, b) =>
+                  getPePlaceAssignCountForClass(className, a) - getPePlaceAssignCountForClass(className, b)
+              );
+              for (const pePlace of orderedPePlaces) {
                 const candidate = { subject: "체육", pePlace };
                 if (specialistType && !isSpecialistSlotAllowedByAvailability(subject, day, period, pePlace)) continue;
                 if (!specialistType || !hasSpecialistConflict(className, day, period, candidate, false)) {
@@ -1795,7 +1882,7 @@
       async function runAutoGenerateFromSettings() {
         const subjectInputs = Array.from(autoGenerateRows.querySelectorAll("[data-subject]"));
         if (!subjectInputs.length) {
-          window.alert("전담 과목에서 체크된 항목이 없습니다. 전담 과목을 먼저 선택해 주세요.");
+          window.alert("전담/담임 과목에서 체크된 항목이 없습니다. 과목을 먼저 선택해 주세요.");
           return;
         }
 
@@ -1810,7 +1897,8 @@
 
         clearAutoGeneratedEntriesForSubjects(Object.keys(targetCounts));
 
-        const shortages = {};
+        const specialistShortages = [];
+        const homeroomShortages = [];
         const classes = buildClasses(classCount);
         const shuffledClasses = [...classes].sort(() => Math.random() - 0.5);
         const specialistSubjectsToAssign = Object.keys(targetCounts).filter((subject) =>
@@ -1829,13 +1917,16 @@
             let needed = Math.max(0, target - assigned);
 
             while (needed > 0) {
-              const bundleSize = subject !== "체육" ? Math.min(seriesSize, needed) : 1;
-              const bundle =
-                bundleSize > 1
-                  ? findRandomAutoAssignableBundle(className, subject, bundleSize, "specialist")
-                  : findRandomAutoAssignableSlot(className, subject, "specialist");
+              if (subject !== "체육" && seriesSize && needed < seriesSize) {
+                specialistShortages.push({ className, subject, lack: needed });
+                break;
+              }
+              const bundleSize = subject !== "체육" && seriesSize ? seriesSize : 1;
+              const bundle = bundleSize > 1
+                ? findRandomAutoAssignableBundle(className, subject, bundleSize, "specialist")
+                : findRandomAutoAssignableSlot(className, subject, "specialist");
               if (!bundle) {
-                shortages[subject] = (shortages[subject] || 0) + needed;
+                specialistShortages.push({ className, subject, lack: needed });
                 break;
               }
 
@@ -1853,7 +1944,7 @@
                 assignedCount += 1;
               }
               if (!assignedCount) {
-                shortages[subject] = (shortages[subject] || 0) + needed;
+                specialistShortages.push({ className, subject, lack: needed });
                 break;
               }
               needed -= assignedCount;
@@ -1861,34 +1952,18 @@
           }
         }
 
-        for (const className of shuffledClasses) {
-          const shuffledHomerooms = [...homeroomSubjectsToAssign].sort(() => Math.random() - 0.5);
-          for (const subject of shuffledHomerooms) {
-            const target = targetCounts[subject];
-            const assigned = countAssignedSubjectForClass(className, subject);
-            let needed = Math.max(0, target - assigned);
-
-            while (needed > 0) {
-              const slot = findRandomAutoAssignableSlot(className, subject, "general");
-              if (!slot) {
-                shortages[subject] = (shortages[subject] || 0) + needed;
-                break;
-              }
-              const assignedOk = await assignEntryToClassCell(
-                className,
-                slot.day,
-                slot.period,
-                slot.entry,
-                false,
-                "auto"
-              );
-              if (!assignedOk) {
-                shortages[subject] = (shortages[subject] || 0) + needed;
-                break;
-              }
-              needed -= 1;
-            }
-          }
+        if (specialistShortages.length) {
+          closeAutoGenerateModal();
+          renderTimetables();
+          const detail = specialistShortages
+            .slice(0, 12)
+            .map((item) => `- ${item.className} ${item.subject}: ${item.lack}시수 부족`)
+            .join("\n");
+          const more = specialistShortages.length > 12 ? `\n... 외 ${specialistShortages.length - 12}건` : "";
+          window.alert(
+            `전담 과목을 모두 배치하지 못해 자동 생성을 중단했습니다.\n전담 과목 배치 가능 시간을 늘린 뒤 다시 시도해 주세요.\n${detail}${more}`
+          );
+          return;
         }
 
         for (const className of shuffledClasses) {
@@ -1901,7 +1976,7 @@
             while (needed > 0) {
               const slot = findRandomAutoAssignableSlot(className, subject, "general");
               if (!slot) {
-                shortages[subject] = (shortages[subject] || 0) + needed;
+                homeroomShortages.push({ className, subject, lack: needed });
                 break;
               }
               const assignedOk = await assignEntryToClassCell(
@@ -1913,7 +1988,7 @@
                 "auto"
               );
               if (!assignedOk) {
-                shortages[subject] = (shortages[subject] || 0) + needed;
+                homeroomShortages.push({ className, subject, lack: needed });
                 break;
               }
               needed -= 1;
@@ -1924,10 +1999,16 @@
         closeAutoGenerateModal();
         renderTimetables();
 
-        const shortageEntries = Object.entries(shortages).filter(([, lack]) => lack > 0);
-        if (shortageEntries.length) {
-          const messageLines = shortageEntries.map(([subject, lack]) => `- ${subject}: ${lack}시수 부족`);
-          window.alert(`일부 과목은 요청 시수를 모두 배치하지 못했습니다.\n${messageLines.join("\n")}`);
+        if (homeroomShortages.length) {
+          const messageLines = homeroomShortages
+            .slice(0, 15)
+            .map((item) => `- ${item.className} ${item.subject}: ${item.lack}시수 부족`);
+          const more = homeroomShortages.length > 15 ? `\n... 외 ${homeroomShortages.length - 15}건` : "";
+          window.alert(
+            `전담 과목 배치는 완료되었습니다.\n다음 담임 과목은 요청 시수를 모두 배치하지 못했습니다.\n${messageLines.join(
+              "\n"
+            )}${more}`
+          );
         } else {
           window.alert("자동 시간표 생성이 완료되었습니다.");
         }
