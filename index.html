@@ -308,6 +308,10 @@
         background: #f9a8d4;
       }
 
+      .pe-picker-actions .other-btn {
+        background: #f9a8d4;
+      }
+
       .pe-picker-cancel {
         margin-top: 8px;
         width: 100%;
@@ -380,6 +384,10 @@
         display: none;
       }
 
+      .custom-hour-input {
+        display: none;
+      }
+
       .auto-field {
         display: grid;
         gap: 2px;
@@ -389,6 +397,15 @@
         font-size: 0.72rem;
         color: #6b7280;
         font-weight: 700;
+      }
+
+      .auto-specialist-label {
+        color: #7c3aed;
+      }
+
+      .auto-subject-divider {
+        border-top: 1px dashed #c4b5fd;
+        margin: 8px 0 10px;
       }
 
       .auto-specialist-label {
@@ -492,6 +509,41 @@
         padding: 7px 8px;
         text-align: left;
         cursor: pointer;
+      }
+
+      .pe-quick-menu {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+        min-width: 186px;
+        max-height: none;
+        overflow: visible;
+      }
+
+      .pe-quick-btn {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 7px 6px;
+        font-weight: 800;
+        cursor: pointer;
+        color: #111827;
+      }
+
+      .pe-quick-btn.gym {
+        background: #86efac;
+      }
+
+      .pe-quick-btn.ground {
+        background: #c4b5fd;
+      }
+
+      .pe-quick-btn.other {
+        background: #f9a8d4;
+      }
+
+      .pe-quick-btn.inactive {
+        opacity: 0.35;
       }
 
       .pe-quick-menu {
@@ -793,6 +845,10 @@
         background: #fff;
         border: 1px solid var(--line);
         border-radius: 10px;
+        overflow: visible;
+      }
+
+      .specialist-card td {
         overflow: visible;
       }
 
@@ -2105,11 +2161,71 @@
                 }
               }
             }
-            if (valid) candidates.push(slots);
+            if (valid) {
+              const edgeDistance = Math.min(start - 1, maxPeriodCount - (start + bundleSize - 1));
+              candidates.push({ slots, edgeDistance });
+            }
           }
         }
         if (!candidates.length) return null;
-        return candidates[Math.floor(Math.random() * candidates.length)];
+        const minDistance = Math.min(...candidates.map((item) => item.edgeDistance));
+        const edgePreferred = candidates.filter((item) => item.edgeDistance === minDistance);
+        const pool = edgePreferred.length ? edgePreferred : candidates;
+        return pool[Math.floor(Math.random() * pool.length)].slots;
+      }
+
+      function explainAutoPlacementFailure(className, subject, subjectType = "specialist", bundleSize = 1) {
+        if (bundleSize > 1) {
+          return "연차시 조건 충돌(연속 가능한 시간대 부족)";
+        }
+        if (subject === PE_SUBJECT) {
+          const allPePlacesUsed = ["강당", "운동장", "그 외"].every((pePlace) =>
+            hasPePlaceAssignedForClass(className, pePlace)
+          );
+          if (allPePlacesUsed) {
+            return "같은 공간 체육 중복 금지 규칙으로 배치 불가";
+          }
+        }
+
+        let candidateCount = 0;
+        let afterDisabled = 0;
+        let afterOccupied = 0;
+        let afterExcluded = 0;
+        let afterAvailability = 0;
+        let afterDaily = 0;
+        let afterConflict = 0;
+        let afterConsecutive = 0;
+
+        for (let period = 1; period <= maxPeriodCount; period += 1) {
+          for (const day of days) {
+            candidateCount += 1;
+            if (isDisabledSlot(day, period)) continue;
+            afterDisabled += 1;
+            if (getEntry(className, day, period)) continue;
+            afterOccupied += 1;
+            if (countSubjectOnDayForClass(className, day, subject) >= getDailySubjectLimit(subject)) continue;
+            afterDaily += 1;
+            if (subjectType === "specialist" && specialistExcludedSlots.has(getCellKey(className, day, period))) continue;
+            afterExcluded += 1;
+            if (subjectType === "specialist" && !isSpecialistSlotAllowedByAvailability(subject, day, period)) continue;
+            afterAvailability += 1;
+            if (subjectType !== "specialist" && !canPlaceHomeroomSubjectAt(className, day, period, subject)) continue;
+            const nextEntry = { subject };
+            if (subjectType === "specialist" && hasSpecialistConflict(className, day, period, nextEntry, false)) continue;
+            afterConflict += 1;
+            if (subjectType === "specialist" && wouldCreateThreeConsecutiveSpecialists(className, day, period, nextEntry)) continue;
+            afterConsecutive += 1;
+          }
+        }
+
+        if (!afterDisabled) return "마지막 교시 X 등 비활성 슬롯으로 배치 칸 부족";
+        if (!afterOccupied) return "수동 확정값/기존 배치로 빈칸 부족";
+        if (!afterDaily) return "같은 날 동일 과목 횟수 제한으로 배치 불가";
+        if (subjectType === "specialist" && !afterExcluded) return "반별 시간표 전담 제외 칸 때문에 배치 불가";
+        if (subjectType === "specialist" && !afterAvailability) return "전담 O 가능 시간대 부족";
+        if (!afterConflict) return "동일 시간 전담 과목/담당 교사 중복 금지 충돌";
+        if (!afterConsecutive) return "전담 3연속 금지 규칙 충돌";
+        return `복합 제약으로 배치 불가(후보 ${afterConsecutive}/${candidateCount})`;
       }
 
       function explainAutoPlacementFailure(className, subject, subjectType = "specialist", bundleSize = 1) {
@@ -2203,10 +2319,17 @@
           const specialistShortages = [];
           const homeroomShortages = [];
           const shuffledClasses = [...classes].sort(() => Math.random() - 0.5);
+          const prioritizeBySeries = (subjects) => {
+            const shuffled = [...subjects].sort(() => Math.random() - 0.5);
+            const seriesFirst = shuffled.filter((subject) => Boolean(getSeriesSize(subject)));
+            const normalLater = shuffled.filter((subject) => !getSeriesSize(subject));
+            return [...seriesFirst, ...normalLater];
+          };
+          const orderedSpecialistSubjects = prioritizeBySeries(specialistSubjectsToAssign);
+          const orderedHomeroomSubjects = prioritizeBySeries(homeroomSubjectsToAssign);
 
           for (const className of shuffledClasses) {
-            const shuffledSpecialists = [...specialistSubjectsToAssign].sort(() => Math.random() - 0.5);
-            for (const subject of shuffledSpecialists) {
+            for (const subject of orderedSpecialistSubjects) {
               const target = targetCounts[subject];
               const assigned = countAssignedSubjectForClass(className, subject);
               const seriesSize = getSeriesSize(subject);
@@ -2261,8 +2384,7 @@
           if (specialistShortages.length) return { specialistShortages, homeroomShortages };
 
           for (const className of shuffledClasses) {
-            const shuffledHomerooms = [...homeroomSubjectsToAssign].sort(() => Math.random() - 0.5);
-            for (const subject of shuffledHomerooms) {
+            for (const subject of orderedHomeroomSubjects) {
               const target = targetCounts[subject];
               const assigned = countAssignedSubjectForClass(className, subject);
               const seriesSize = getSeriesSize(subject);
@@ -2727,7 +2849,7 @@
         menu.setAttribute("tabindex", "0");
         menu.focus();
         menu.addEventListener("keydown", (event) => {
-          if (tableName === "체육" && /^\d$/.test(event.key)) {
+          if (/^\d$/.test(event.key)) {
             const classNumber = Number(event.key);
             if (classNumber >= 1 && classNumber <= classCount) {
               event.preventDefault();
