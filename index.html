@@ -439,6 +439,34 @@
         cursor: pointer;
       }
 
+      .pe-quick-menu {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+      }
+
+      .pe-quick-btn {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 7px 6px;
+        font-weight: 800;
+        cursor: pointer;
+        color: #111827;
+      }
+
+      .pe-quick-btn.gym {
+        background: #86efac;
+      }
+
+      .pe-quick-btn.ground {
+        background: #c4b5fd;
+      }
+
+      .pe-quick-btn.inactive {
+        opacity: 0.35;
+      }
+
       .class-select-section-title {
         padding: 6px 8px;
         font-size: 0.75rem;
@@ -1229,15 +1257,34 @@
               td.style.textDecoration = "none";
 
               if (tableName === "체육") {
+                const peAssignments = getPeAssignmentsByPlace(day, period);
+                const assignmentLabels = [];
+                if (peAssignments.gym.length) {
+                  assignmentLabels.push(`강${peAssignments.gym.join(",")}`);
+                }
+                if (peAssignments.ground.length) {
+                  assignmentLabels.push(`운${peAssignments.ground.join(",")}`);
+                }
+                if (assignmentLabels.length) {
+                  td.style.backgroundImage = "";
+                  td.style.background = "#e5e7eb";
+                  td.textContent = assignmentLabels.join(" / ");
+                  td.style.textDecoration = matchedEntries.some((entry) => entry.source !== "auto")
+                    ? "underline"
+                    : "none";
+                  row.appendChild(td);
+                  return;
+                }
+
                 const peAvailability = getPeAvailability(day, period);
                 const peLabels = [];
                 const colors = [];
                 if (peAvailability.gym) {
-                  peLabels.push("강당 O");
+                  peLabels.push("강O");
                   colors.push(pePlaceColorMap["강당"]);
                 }
                 if (peAvailability.ground) {
-                  peLabels.push("운동장 O");
+                  peLabels.push("운O");
                   colors.push(pePlaceColorMap["운동장"]);
                 }
                 if (colors.length > 1) {
@@ -1289,7 +1336,13 @@
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
                   const openedMenu = td.querySelector(".class-select-menu");
-                  if (openedMenu && event.key === "Enter" && tableName !== "체육") {
+                  if (openedMenu && event.key === "Enter") {
+                    if (tableName === "체육") {
+                      if (clearPeAssignmentsAtSlot(day, period)) {
+                        renderTimetables();
+                      }
+                      return;
+                    }
                     toggleSpecialistAvailabilitySlot(tableName, day, period);
                     return;
                   }
@@ -1945,6 +1998,26 @@
         return assignments;
       }
 
+      function getPeAssignmentsByPlace(day, period) {
+        const assignments = getSpecialistAssignmentsAtSlot("체육", day, period);
+        const grouped = { gym: [], ground: [] };
+        assignments.forEach(({ className, entry }) => {
+          const classNumber = className.replace("반", "");
+          if (entry?.pePlace === "강당") grouped.gym.push(classNumber);
+          if (entry?.pePlace === "운동장") grouped.ground.push(classNumber);
+        });
+        return grouped;
+      }
+
+      function clearPeAssignmentsAtSlot(day, period) {
+        const assignments = getSpecialistAssignmentsAtSlot("체육", day, period);
+        if (!assignments.length) return false;
+        assignments.forEach(({ className }) => {
+          delete subjectStore[getCellKey(className, day, period)];
+        });
+        return true;
+      }
+
       async function applySpecialistDropdownSelection(tableName, day, period, selectedValue) {
         const existingAssignments = getSpecialistAssignmentsAtSlot(tableName, day, period);
         const backup = existingAssignments.map((item) => ({
@@ -2007,15 +2080,10 @@
 
       function applyPeAvailabilitySelection(day, period, mode) {
         const current = getPeAvailability(day, period);
-        if (mode === "clear") {
-          setPeAvailability(day, period, { gym: false, ground: false });
-        } else if (mode === "gym") {
+        if (mode === "gym") {
           setPeAvailability(day, period, { gym: !current.gym, ground: current.ground });
         } else if (mode === "ground") {
           setPeAvailability(day, period, { gym: current.gym, ground: !current.ground });
-        } else if (mode === "both") {
-          const allEnabled = current.gym && current.ground;
-          setPeAvailability(day, period, { gym: !allEnabled, ground: !allEnabled });
         }
         renderTimetables();
       }
@@ -2051,20 +2119,14 @@
         };
 
         if (tableName === "체육") {
-          const clearButton = document.createElement("button");
-          clearButton.type = "button";
-          clearButton.className = "class-select-option";
-          clearButton.textContent = "비우기";
-          clearButton.addEventListener("click", (event) => {
-            event.stopPropagation();
-            applyPeAvailabilitySelection(day, period, "clear");
-          });
-          menu.appendChild(clearButton);
+          menu.classList.add("pe-quick-menu");
+          const peAvailability = getPeAvailability(day, period);
 
           const gymButton = document.createElement("button");
           gymButton.type = "button";
-          gymButton.className = "class-select-option";
-          gymButton.textContent = "강당 배치 가능 토글";
+          gymButton.className = `pe-quick-btn gym${peAvailability.gym ? "" : " inactive"}`;
+          gymButton.textContent = "강";
+          gymButton.title = "강당 가능 토글";
           gymButton.addEventListener("click", (event) => {
             event.stopPropagation();
             applyPeAvailabilitySelection(day, period, "gym");
@@ -2073,23 +2135,14 @@
 
           const groundButton = document.createElement("button");
           groundButton.type = "button";
-          groundButton.className = "class-select-option";
-          groundButton.textContent = "운동장 배치 가능 토글";
+          groundButton.className = `pe-quick-btn ground${peAvailability.ground ? "" : " inactive"}`;
+          groundButton.textContent = "운";
+          groundButton.title = "운동장 가능 토글";
           groundButton.addEventListener("click", (event) => {
             event.stopPropagation();
             applyPeAvailabilitySelection(day, period, "ground");
           });
           menu.appendChild(groundButton);
-
-          const bothButton = document.createElement("button");
-          bothButton.type = "button";
-          bothButton.className = "class-select-option";
-          bothButton.textContent = "강당+운동장 동시 가능 토글";
-          bothButton.addEventListener("click", (event) => {
-            event.stopPropagation();
-            applyPeAvailabilitySelection(day, period, "both");
-          });
-          menu.appendChild(bothButton);
         } else {
           renderOptions(async (classNumber) => {
             await applySpecialistDropdownSelection(tableName, day, period, classNumber);
