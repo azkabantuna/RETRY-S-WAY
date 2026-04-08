@@ -346,7 +346,7 @@
 
       .auto-row {
         display: grid;
-        grid-template-columns: 1fr 90px 80px 120px 80px;
+        grid-template-columns: 1fr 90px 150px 80px;
         align-items: center;
         gap: 10px;
         margin-bottom: 8px;
@@ -388,6 +388,7 @@
         text-align: left;
         cursor: pointer;
         font-size: 0.85rem;
+        white-space: nowrap;
       }
 
       .teacher-menu {
@@ -414,6 +415,7 @@
         padding: 7px 8px;
         text-align: left;
         cursor: pointer;
+        white-space: nowrap;
       }
 
       .class-select-menu {
@@ -437,6 +439,34 @@
         padding: 7px 8px;
         text-align: left;
         cursor: pointer;
+      }
+
+      .pe-quick-menu {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+      }
+
+      .pe-quick-btn {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 7px 6px;
+        font-weight: 800;
+        cursor: pointer;
+        color: #111827;
+      }
+
+      .pe-quick-btn.gym {
+        background: #86efac;
+      }
+
+      .pe-quick-btn.ground {
+        background: #c4b5fd;
+      }
+
+      .pe-quick-btn.inactive {
+        opacity: 0.35;
       }
 
       .pe-quick-menu {
@@ -651,7 +681,7 @@
           <li>자동 생성 전에는 체육을 먼저 배치하고, 마지막 교시 X 설정으로 요일별 마지막 교시 사용 여부를 정하세요.</li>
           <li>학급 시간표 칸에 과목을 직접 입력하거나, 전담 시간표 칸에 반 번호를 입력해도 같은 위치에 서로 연동됩니다.</li>
           <li>자동 생성은 설정한 시수대로 전담 과목을 배치하며, 다시 실행해도 수동 확정값/체육/X 설정은 유지됩니다.</li>
-          <li>중복 확인 버튼으로 충돌 여부를 빠르게 점검하세요.</li>
+          <li>필요 시 전담 시간표와 반별 시간표의 같은 시간대를 비교해 충돌 여부를 점검하세요.</li>
         </ol>
         <div class="credit-note">
           제작: github: azkabantuna ·
@@ -685,10 +715,19 @@
         </div>
 
         <div class="control-group">
-          <button id="autoGenerateBtn" class="auto-generate-btn" type="button">자동 시간표 생성</button>
+          <label for="homeroomToggle">담임 과목</label>
+          <div class="specialist-picker">
+            <button id="homeroomToggle" class="specialist-toggle" type="button" aria-expanded="false">
+              담임 과목 선택 (복수 선택)
+            </button>
+            <div id="homeroomMenu" class="specialist-menu" role="listbox" aria-multiselectable="true">
+              <div id="homeroomOptions" class="subject-options"></div>
+            </div>
+          </div>
         </div>
+
         <div class="control-group">
-          <button id="checkDuplicateBtn" class="check-duplicate-btn" type="button">중복 확인</button>
+          <button id="autoGenerateBtn" class="auto-generate-btn" type="button">자동 시간표 생성</button>
         </div>
       </section>
 
@@ -804,6 +843,9 @@
       const specialistToggle = document.getElementById("specialistToggle");
       const specialistMenu = document.getElementById("specialistMenu");
       const subjectOptions = document.getElementById("subjectOptions");
+      const homeroomToggle = document.getElementById("homeroomToggle");
+      const homeroomMenu = document.getElementById("homeroomMenu");
+      const homeroomOptions = document.getElementById("homeroomOptions");
       const pePickerModal = document.getElementById("pePickerModal");
       const pePickerCancel = document.getElementById("pePickerCancel");
       const autoGenerateBtn = document.getElementById("autoGenerateBtn");
@@ -812,7 +854,6 @@
       const autoGenerateRunBtn = document.getElementById("autoGenerateRunBtn");
       const autoGenerateCancelBtn = document.getElementById("autoGenerateCancelBtn");
       const lastPeriodBody = document.getElementById("lastPeriodBody");
-      const checkDuplicateBtn = document.getElementById("checkDuplicateBtn");
       const conflictConfirmModal = document.getElementById("conflictConfirmModal");
       const conflictProceedBtn = document.getElementById("conflictProceedBtn");
       const conflictCancelBtn = document.getElementById("conflictCancelBtn");
@@ -822,15 +863,14 @@
 
       const subjectStore = {};
       const selectedSpecialists = new Set();
+      const selectedHomerooms = new Set();
       const disabledLastPeriodDays = new Set();
       const autoGenerateSubjectCounts = {};
-      const autoGenerateSubjectTypes = {};
       const autoGenerateSubjectSeries = {};
       const subjectTeacherAssignments = {};
       const specialistAvailableSlots = {};
       const peAvailableSlots = {};
       const specialistExcludedSlots = new Set();
-      const allSpecialistSubjectNames = new Set(specialistSubjects.map((subject) => subject.name));
       const specialistColorMap = Object.fromEntries(
         specialistSubjects.map((subject) => [subject.name, subject.color])
       );
@@ -864,7 +904,11 @@
       }
 
       function isSpecialistSubject(subject) {
-        return subject === "체육" || selectedSpecialists.has(subject);
+        return selectedSpecialists.has(subject);
+      }
+
+      function isHomeroomSubject(subject) {
+        return selectedHomerooms.has(subject);
       }
 
       function getEntry(className, day, period) {
@@ -1018,7 +1062,9 @@
       }
 
       function openAutoGenerateModal() {
-        const subjects = Array.from(selectedSpecialists);
+        const specialistList = Array.from(selectedSpecialists);
+        const homeroomList = Array.from(selectedHomerooms).filter((subject) => !selectedSpecialists.has(subject));
+        const subjects = [...specialistList, ...homeroomList];
         autoGenerateRows.innerHTML = "";
 
         subjects.forEach((subject) => {
@@ -1027,30 +1073,6 @@
 
           const label = document.createElement("label");
           label.textContent = subject;
-
-          const typeField = document.createElement("div");
-          typeField.className = "auto-field";
-          const typeTitle = document.createElement("span");
-          typeTitle.className = "auto-field-title";
-          typeTitle.textContent = "구분";
-          const typeSelect = document.createElement("select");
-          typeSelect.dataset.subjectType = subject;
-          [
-            { value: "specialist", text: "전담" },
-            { value: "general", text: "일반" }
-          ].forEach((item) => {
-            const option = document.createElement("option");
-            option.value = item.value;
-            option.textContent = item.text;
-            typeSelect.appendChild(option);
-          });
-          const defaultType = subject === "자율" || subject === "창체" ? "general" : "specialist";
-          typeSelect.value = autoGenerateSubjectTypes[subject] || defaultType;
-          autoGenerateSubjectTypes[subject] = typeSelect.value;
-          typeSelect.addEventListener("change", () => {
-            autoGenerateSubjectTypes[subject] = typeSelect.value;
-          });
-          typeField.append(typeTitle, typeSelect);
 
           const hourField = document.createElement("div");
           hourField.className = "auto-field";
@@ -1084,16 +1106,19 @@
           const teacherToggle = document.createElement("button");
           teacherToggle.type = "button";
           teacherToggle.className = "teacher-toggle";
-          teacherToggle.textContent = getAssignedTeacher(subject) || "미지정";
+          if (!subjectTeacherAssignments[subject]) {
+            subjectTeacherAssignments[subject] = "담임";
+          }
+          teacherToggle.textContent = getAssignedTeacher(subject) || "담임";
           const teacherMenu = document.createElement("div");
           teacherMenu.className = "teacher-menu";
-          ["미지정", "교사1", "교사2", "교사3", "교사4", "교사5"].forEach((teacherName) => {
+          ["담임", "전담1", "전담2", "전담3", "강사1", "강사2"].forEach((teacherName) => {
             const option = document.createElement("button");
             option.type = "button";
             option.className = "teacher-option";
             option.textContent = teacherName;
             option.addEventListener("click", () => {
-              subjectTeacherAssignments[subject] = teacherName === "미지정" ? "" : teacherName;
+              subjectTeacherAssignments[subject] = teacherName;
               teacherToggle.textContent = teacherName;
               teacherMenu.classList.remove("open");
             });
@@ -1124,7 +1149,7 @@
           });
           seriesField.append(seriesTitle, seriesSelect);
 
-          row.append(label, typeField, hourField, teacherField, seriesField);
+          row.append(label, hourField, teacherField, seriesField);
           autoGenerateRows.appendChild(row);
         });
 
@@ -1571,7 +1596,7 @@
 
       // 3차시 연속 전담 배치 방지 로직 (수정된 부분)
       function wouldCreateThreeConsecutiveSpecialists(className, day, period, nextEntry) {
-        if (!allSpecialistSubjectNames.has(nextEntry.subject)) return false;
+        if (!isSpecialistSubject(nextEntry.subject)) return false;
 
         let consecutive = 0;
         for (let currentPeriod = 1; currentPeriod <= maxPeriodCount; currentPeriod += 1) {
@@ -1580,7 +1605,7 @@
             currentEntry = nextEntry;
           }
 
-          if (currentEntry && allSpecialistSubjectNames.has(currentEntry.subject)) {
+          if (currentEntry && isSpecialistSubject(currentEntry.subject)) {
             consecutive += 1;
             if (consecutive >= 3) return true;
           } else {
@@ -1604,6 +1629,19 @@
         return Boolean(specialistAvailableSlots[getSpecialistSlotKey(subject, day, period)]);
       }
 
+      function canPlaceHomeroomSubjectAt(className, day, period, subject) {
+        const subjectPeriods = [];
+        for (let currentPeriod = 1; currentPeriod <= maxPeriodCount; currentPeriod += 1) {
+          const entry = getEntry(className, day, currentPeriod);
+          if (entry?.subject === subject) subjectPeriods.push(currentPeriod);
+        }
+        if (subjectPeriods.length >= 2) return false;
+        if (subjectPeriods.length === 1) {
+          return Math.abs(subjectPeriods[0] - period) === 1;
+        }
+        return true;
+      }
+
       function findRandomAutoAssignableSlot(className, subject, subjectType = "specialist") {
         const candidates = [];
         const specialistType = subjectType === "specialist";
@@ -1616,6 +1654,7 @@
             if (existing) continue;
             if (specialistType && specialistExcludedSlots.has(getCellKey(className, day, period))) continue;
             if (specialistType && !isSpecialistSlotAllowedByAvailability(subject, day, period)) continue;
+            if (!specialistType && !canPlaceHomeroomSubjectAt(className, day, period, subject)) continue;
 
             if (subject === "체육") {
               for (const pePlace of ["강당", "운동장"]) {
@@ -1669,6 +1708,10 @@
                   valid = false;
                   break;
                 }
+              }
+              if (subjectType !== "specialist" && !canPlaceHomeroomSubjectAt(className, day, period, subject)) {
+                valid = false;
+                break;
               }
               slots.push({ day, period, entry: { subject } });
             }
@@ -1725,24 +1768,27 @@
         const shortages = {};
         const classes = buildClasses(classCount);
         const shuffledClasses = [...classes].sort(() => Math.random() - 0.5);
+        const specialistSubjectsToAssign = Object.keys(targetCounts).filter((subject) =>
+          selectedSpecialists.has(subject)
+        );
+        const homeroomSubjectsToAssign = Object.keys(targetCounts).filter(
+          (subject) => selectedHomerooms.has(subject) && !selectedSpecialists.has(subject)
+        );
 
         for (const className of shuffledClasses) {
-          const shuffledInputs = [...subjectInputs].sort(() => Math.random() - 0.5);
-          for (const input of shuffledInputs) {
-            const subject = input.dataset.subject;
+          const shuffledSpecialists = [...specialistSubjectsToAssign].sort(() => Math.random() - 0.5);
+          for (const subject of shuffledSpecialists) {
             const target = targetCounts[subject];
             const assigned = countAssignedSubjectForClass(className, subject);
-            const subjectType = autoGenerateSubjectTypes[subject] || "specialist";
             const seriesSize = getSeriesSize(subject);
             let needed = Math.max(0, target - assigned);
 
             while (needed > 0) {
-              const bundleSize =
-                subjectType === "specialist" && subject !== "체육" ? Math.min(seriesSize, needed) : 1;
+              const bundleSize = subject !== "체육" ? Math.min(seriesSize, needed) : 1;
               const bundle =
                 bundleSize > 1
-                  ? findRandomAutoAssignableBundle(className, subject, bundleSize, subjectType)
-                  : findRandomAutoAssignableSlot(className, subject, subjectType);
+                  ? findRandomAutoAssignableBundle(className, subject, bundleSize, "specialist")
+                  : findRandomAutoAssignableSlot(className, subject, "specialist");
               if (!bundle) {
                 shortages[subject] = (shortages[subject] || 0) + needed;
                 break;
@@ -1770,6 +1816,36 @@
           }
         }
 
+        for (const className of shuffledClasses) {
+          const shuffledHomerooms = [...homeroomSubjectsToAssign].sort(() => Math.random() - 0.5);
+          for (const subject of shuffledHomerooms) {
+            const target = targetCounts[subject];
+            const assigned = countAssignedSubjectForClass(className, subject);
+            let needed = Math.max(0, target - assigned);
+
+            while (needed > 0) {
+              const slot = findRandomAutoAssignableSlot(className, subject, "general");
+              if (!slot) {
+                shortages[subject] = (shortages[subject] || 0) + needed;
+                break;
+              }
+              const assignedOk = await assignEntryToClassCell(
+                className,
+                slot.day,
+                slot.period,
+                slot.entry,
+                false,
+                "auto"
+              );
+              if (!assignedOk) {
+                shortages[subject] = (shortages[subject] || 0) + needed;
+                break;
+              }
+              needed -= 1;
+            }
+          }
+        }
+
         closeAutoGenerateModal();
         renderTimetables();
 
@@ -1779,72 +1855,6 @@
           window.alert(`일부 과목은 요청 시수를 모두 배치하지 못했습니다.\n${messageLines.join("\n")}`);
         } else {
           window.alert("자동 시간표 생성이 완료되었습니다.");
-        }
-      }
-
-      function checkDuplicateConflicts() {
-        const classes = buildClasses(classCount);
-        const issues = [];
-
-        for (let period = 1; period <= maxPeriodCount; period += 1) {
-          for (const day of days) {
-            const specialistMap = new Map();
-            const pePlaceMap = new Map();
-            const teacherMap = new Map();
-
-            classes.forEach((className) => {
-              const entry = getEntry(className, day, period);
-              if (!entry) return;
-
-              if (isDisabledSlot(day, period)) {
-                issues.push(`${day} ${period}교시 ${className}: 비활성화(X) 칸에 과목이 배치됨`);
-              }
-
-              if (!isSpecialistSubject(entry.subject)) return;
-
-              const assignedTeacher = getAssignedTeacher(entry.subject);
-              if (assignedTeacher) {
-                if (!teacherMap.has(assignedTeacher)) teacherMap.set(assignedTeacher, []);
-                teacherMap.get(assignedTeacher).push(`${className}(${entry.subject})`);
-              }
-
-              if (entry.subject === "체육") {
-                const peKey = entry.pePlace || "미지정";
-                if (!pePlaceMap.has(peKey)) pePlaceMap.set(peKey, []);
-                pePlaceMap.get(peKey).push(className);
-                return;
-              }
-
-              if (!specialistMap.has(entry.subject)) specialistMap.set(entry.subject, []);
-              specialistMap.get(entry.subject).push(className);
-            });
-
-            specialistMap.forEach((classList, subject) => {
-              if (classList.length > 1) {
-                issues.push(`${day} ${period}교시 ${subject}: ${classList.join(", ")}`);
-              }
-            });
-
-            pePlaceMap.forEach((classList, pePlace) => {
-              if (classList.length > 1) {
-                issues.push(`${day} ${period}교시 체육(${pePlace}): ${classList.join(", ")}`);
-              }
-            });
-
-            teacherMap.forEach((assignments, teacher) => {
-              if (assignments.length > 1) {
-                issues.push(`${day} ${period}교시 ${teacher} 중복: ${assignments.join(", ")}`);
-              }
-            });
-          }
-        }
-
-        if (issues.length) {
-          const detail = issues.slice(0, 12).map((issue) => `- ${issue}`).join("\n");
-          const more = issues.length > 12 ? `\n... 외 ${issues.length - 12}건` : "";
-          window.alert(`중복이 있습니다.\n${detail}${more}`);
-        } else {
-          window.alert("중복이 없습니다.");
         }
       }
 
@@ -2162,8 +2172,8 @@
         }
       }
 
-      function renderSpecialistOptions() {
-        subjectOptions.innerHTML = "";
+      function renderSpecialistOptions(targetContainer, selectedSet, oppositeSet) {
+        targetContainer.innerHTML = "";
 
         specialistSubjects.forEach((subject) => {
           const label = document.createElement("label");
@@ -2173,23 +2183,26 @@
           const checkbox = document.createElement("input");
           checkbox.type = "checkbox";
           checkbox.value = subject.name;
-          checkbox.checked = selectedSpecialists.has(subject.name);
+          checkbox.checked = selectedSet.has(subject.name);
 
           checkbox.addEventListener("change", () => {
             if (checkbox.checked) {
-              selectedSpecialists.add(subject.name);
+              selectedSet.add(subject.name);
+              oppositeSet.delete(subject.name);
             } else {
-              selectedSpecialists.delete(subject.name);
+              selectedSet.delete(subject.name);
             }
             applySpecialistSlotColors();
             renderSpecialistTimetables();
+            renderSpecialistOptions(subjectOptions, selectedSpecialists, selectedHomerooms);
+            renderSpecialistOptions(homeroomOptions, selectedHomerooms, selectedSpecialists);
           });
 
           const text = document.createElement("span");
           text.textContent = subject.name;
 
           label.append(checkbox, text);
-          subjectOptions.appendChild(label);
+          targetContainer.appendChild(label);
         });
       }
 
@@ -2197,12 +2210,27 @@
         specialistToggle.addEventListener("click", () => {
           const open = specialistMenu.classList.toggle("open");
           specialistToggle.setAttribute("aria-expanded", String(open));
+          if (open) {
+            homeroomMenu.classList.remove("open");
+            homeroomToggle.setAttribute("aria-expanded", "false");
+          }
+        });
+
+        homeroomToggle.addEventListener("click", () => {
+          const open = homeroomMenu.classList.toggle("open");
+          homeroomToggle.setAttribute("aria-expanded", String(open));
+          if (open) {
+            specialistMenu.classList.remove("open");
+            specialistToggle.setAttribute("aria-expanded", "false");
+          }
         });
 
         document.addEventListener("click", (event) => {
           if (!event.target.closest(".specialist-picker")) {
             specialistMenu.classList.remove("open");
             specialistToggle.setAttribute("aria-expanded", "false");
+            homeroomMenu.classList.remove("open");
+            homeroomToggle.setAttribute("aria-expanded", "false");
           }
         });
       }
@@ -2266,12 +2294,6 @@
         });
       }
 
-      function setupDuplicateCheck() {
-        checkDuplicateBtn.addEventListener("click", () => {
-          checkDuplicateConflicts();
-        });
-      }
-
       function setupSpecialistCellMenuClose() {
         document.addEventListener("click", (event) => {
           if (event.target.closest(".class-select-menu")) return;
@@ -2297,9 +2319,9 @@
       setupPePicker();
       setupConflictConfirmModal();
       setupAutoGenerate();
-      setupDuplicateCheck();
       setupSpecialistCellMenuClose();
-      renderSpecialistOptions();
+      renderSpecialistOptions(subjectOptions, selectedSpecialists, selectedHomerooms);
+      renderSpecialistOptions(homeroomOptions, selectedHomerooms, selectedSpecialists);
       renderTimetables();
       </script>
   </body>
