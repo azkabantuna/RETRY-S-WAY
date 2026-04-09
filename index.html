@@ -150,6 +150,17 @@
         display: grid;
         grid-template-columns: repeat(1, minmax(0, 1fr));
         gap: 8px;
+        margin-top: 8px;
+      }
+
+      .add-subject-btn {
+        width: 100%;
+        border: 1px dashed #94a3b8;
+        background: #f8fafc;
+        border-radius: 7px;
+        padding: 6px 8px;
+        font-size: 0.82rem;
+        cursor: pointer;
       }
 
       .subject-option {
@@ -312,6 +323,10 @@
         background: #f9a8d4;
       }
 
+      .pe-picker-actions .other-btn {
+        background: #f9a8d4;
+      }
+
       .pe-picker-cancel {
         margin-top: 8px;
         width: 100%;
@@ -388,6 +403,10 @@
         display: none;
       }
 
+      .custom-hour-input {
+        display: none;
+      }
+
       .auto-field {
         display: grid;
         gap: 2px;
@@ -397,6 +416,15 @@
         font-size: 0.72rem;
         color: #6b7280;
         font-weight: 700;
+      }
+
+      .auto-specialist-label {
+        color: #7c3aed;
+      }
+
+      .auto-subject-divider {
+        border-top: 1px dashed #c4b5fd;
+        margin: 8px 0 10px;
       }
 
       .auto-specialist-label {
@@ -509,6 +537,42 @@
         padding: 7px 8px;
         text-align: left;
         cursor: pointer;
+      }
+
+      .pe-quick-menu {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+        min-width: 186px;
+        max-height: none;
+        overflow: visible;
+      }
+
+      .pe-quick-btn {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 7px 6px;
+        font-weight: 800;
+        font-size: 0.65rem;
+        cursor: pointer;
+        color: #111827;
+      }
+
+      .pe-quick-btn.gym {
+        background: #86efac;
+      }
+
+      .pe-quick-btn.ground {
+        background: #c4b5fd;
+      }
+
+      .pe-quick-btn.other {
+        background: #f9a8d4;
+      }
+
+      .pe-quick-btn.inactive {
+        opacity: 0.35;
       }
 
       .pe-quick-menu {
@@ -872,6 +936,10 @@
         overflow: visible;
       }
 
+      .specialist-card td {
+        overflow: visible;
+      }
+
       .conflict-modal {
         position: fixed;
         inset: 0;
@@ -915,6 +983,14 @@
         text-align: center;
         font-size: 0.98rem;
         background: #eef2ff;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .specialist-teacher-badge {
+        font-size: 0.78rem;
+        text-align: center;
+        padding: 4px 8px 6px;
+        background: #f8fafc;
         border-bottom: 1px solid var(--line);
       }
 
@@ -997,6 +1073,7 @@
               전담 과목 선택 (복수 선택)
             </button>
             <div id="specialistMenu" class="specialist-menu" role="listbox" aria-multiselectable="true">
+              <button id="addSpecialistSubjectBtn" type="button" class="add-subject-btn">+ 직접 입력</button>
               <div id="subjectOptions" class="subject-options"></div>
             </div>
           </div>
@@ -1009,6 +1086,7 @@
               담임 과목 선택 (복수 선택)
             </button>
             <div id="homeroomMenu" class="specialist-menu" role="listbox" aria-multiselectable="true">
+              <button id="addHomeroomSubjectBtn" type="button" class="add-subject-btn">+ 직접 입력</button>
               <div id="homeroomOptions" class="subject-options"></div>
             </div>
           </div>
@@ -1032,11 +1110,7 @@
     <div id="pePickerModal" class="pe-picker-modal" aria-hidden="true">
       <div class="pe-picker-dialog" role="dialog" aria-modal="true" aria-label="체육 장소 선택">
         <h2>체육 장소를 선택하세요</h2>
-        <div class="pe-picker-actions">
-          <button type="button" class="gym-btn" data-pe-place="강당">강당</button>
-          <button type="button" class="ground-btn" data-pe-place="운동장">운동장</button>
-          <button type="button" class="other-btn" data-pe-place="그 외">그 외</button>
-        </div>
+        <div id="pePickerActions" class="pe-picker-actions"></div>
         <button type="button" id="pePickerCancel" class="pe-picker-cancel">취소</button>
       </div>
     </div>
@@ -1095,11 +1169,7 @@
         "통합",
         "창체",
         "자율",
-        "동아리",
-        "강사1",
-        "강사2",
-        "과목1",
-        "과목2"
+        "동아리"
       ];
       const specialistSubjectColors = [
         "#fde68a",
@@ -1133,10 +1203,13 @@
       const specialistToggle = document.getElementById("specialistToggle");
       const specialistMenu = document.getElementById("specialistMenu");
       const subjectOptions = document.getElementById("subjectOptions");
+      const addSpecialistSubjectBtn = document.getElementById("addSpecialistSubjectBtn");
       const homeroomToggle = document.getElementById("homeroomToggle");
       const homeroomMenu = document.getElementById("homeroomMenu");
       const homeroomOptions = document.getElementById("homeroomOptions");
+      const addHomeroomSubjectBtn = document.getElementById("addHomeroomSubjectBtn");
       const pePickerModal = document.getElementById("pePickerModal");
+      const pePickerActions = document.getElementById("pePickerActions");
       const pePickerCancel = document.getElementById("pePickerCancel");
       const autoGenerateBtn = document.getElementById("autoGenerateBtn");
       const autoGenerateModal = document.getElementById("autoGenerateModal");
@@ -1158,6 +1231,8 @@
       const autoGenerateSubjectCounts = {};
       const autoGenerateSubjectSeries = {};
       const subjectTeacherAssignments = {};
+      const customTeacherNames = new Set();
+      const customPePlaces = [];
       const specialistAvailableSlots = {};
       const peAvailableSlots = {};
       const specialistExcludedSlots = new Set();
@@ -1166,9 +1241,10 @@
       );
       const pePlaceColorMap = {
         강당: "#86efac",
-        운동장: "#c4b5fd",
-        "그 외": "#f9a8d4"
+        운동장: "#c4b5fd"
       };
+      const customSubjectColorPalette = ["#f9a8d4", "#fde68a", "#93c5fd", "#86efac", "#c4b5fd", "#fdba74"];
+      const customTeacherColorPalette = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"];
       let pePickerResolver = null;
       let conflictConfirmResolver = null;
 
@@ -1181,6 +1257,25 @@
       const getCellKey = (className, day, period) => `${className}__${day}__${period}`;
       const getSpecialistSlotKey = (subject, day, period) => `${subject}__${day}__${period}`;
       const getPeSlotKey = (day, period) => `${day}__${period}`;
+      const getAllPePlaceNames = () => ["강당", "운동장", ...customPePlaces];
+
+      function getTeacherColor(name = "") {
+        if (!name) return "#6b7280";
+        let hash = 0;
+        for (let i = 0; i < name.length; i += 1) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+        return customTeacherColorPalette[hash % customTeacherColorPalette.length];
+      }
+
+      function registerCustomSubject(subjectName) {
+        const trimmed = (subjectName || "").trim();
+        if (!trimmed || trimmed === PE_SUBJECT) return "";
+        if (!specialistSubjects.some((item) => item.name === trimmed)) {
+          const color = customSubjectColorPalette[specialistSubjects.length % customSubjectColorPalette.length];
+          specialistSubjects.push({ name: trimmed, color });
+          specialistColorMap[trimmed] = color;
+        }
+        return trimmed;
+      }
 
       function fillSelectOptions(selectElement, start, end, defaultValue) {
         for (let value = start; value <= end; value += 1) {
@@ -1224,17 +1319,16 @@
       }
 
       function getPeAvailability(day, period) {
-        return peAvailableSlots[getPeSlotKey(day, period)] || { gym: false, ground: false, other: false };
+        return peAvailableSlots[getPeSlotKey(day, period)] || {};
       }
 
       function setPeAvailability(day, period, nextState) {
         const key = getPeSlotKey(day, period);
-        const normalized = {
-          gym: Boolean(nextState?.gym),
-          ground: Boolean(nextState?.ground),
-          other: Boolean(nextState?.other)
-        };
-        if (!normalized.gym && !normalized.ground && !normalized.other) {
+        const normalized = {};
+        Object.entries(nextState || {}).forEach(([place, enabled]) => {
+          if (enabled) normalized[place] = true;
+        });
+        if (!Object.keys(normalized).length) {
           delete peAvailableSlots[key];
         } else {
           peAvailableSlots[key] = normalized;
@@ -1260,9 +1354,7 @@
       function getRestrictionText(entry) {
         if (!entry) return "";
         if (entry.subject === "체육" && entry.pePlace) {
-          if (entry.pePlace === "강당") return "체강X";
-          if (entry.pePlace === "운동장") return "체운X";
-          return "체외X";
+          return `체${entry.pePlace[0]}X`;
         }
         if (entry.subject.startsWith("강사")) {
           const instructorNumber = entry.subject.replace("강사", "");
@@ -1274,6 +1366,37 @@
       }
 
       function openPePlacePicker(defaultValue = "강당") {
+        pePickerActions.innerHTML = "";
+        const appendPlaceButton = (placeName, className = "") => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.dataset.pePlace = placeName;
+          if (className) button.classList.add(className);
+          button.textContent = placeName;
+          button.addEventListener("click", () => {
+            closePePlacePicker(placeName);
+          });
+          pePickerActions.appendChild(button);
+        };
+        appendPlaceButton("강당", "gym-btn");
+        appendPlaceButton("운동장", "ground-btn");
+        customPePlaces.forEach((placeName) => appendPlaceButton(placeName, "other-btn"));
+        const inputButton = document.createElement("button");
+        inputButton.type = "button";
+        inputButton.className = "other-btn";
+        inputButton.textContent = "직접 입력";
+        inputButton.addEventListener("click", () => {
+          const placeName = window.prompt("새 체육 장소명을 입력하세요.");
+          const trimmed = (placeName || "").trim();
+          if (!trimmed) return;
+          if (!getAllPePlaceNames().includes(trimmed)) {
+            customPePlaces.push(trimmed);
+            if (!pePlaceColorMap[trimmed]) pePlaceColorMap[trimmed] = "#f9a8d4";
+          }
+          closePePlacePicker(trimmed);
+        });
+        pePickerActions.appendChild(inputButton);
+
         pePickerModal.classList.add("open");
         pePickerModal.setAttribute("aria-hidden", "false");
 
@@ -1441,40 +1564,69 @@
           });
           hourField.append(hourTitle, input, customInput);
 
-          const teacherField = document.createElement("div");
-          teacherField.className = "auto-field";
-          const teacherTitle = document.createElement("span");
-          teacherTitle.className = "auto-field-title";
-          teacherTitle.textContent = "담당 교사";
-          const teacherPicker = document.createElement("div");
-          teacherPicker.className = "teacher-picker";
-          const teacherToggle = document.createElement("button");
-          teacherToggle.type = "button";
-          teacherToggle.className = "teacher-toggle";
-          const defaultTeacher = subjectGroup === "specialist" ? "A교사" : "담임";
-          if (!subjectTeacherAssignments[subject]) {
-            subjectTeacherAssignments[subject] = defaultTeacher;
-          }
-          teacherToggle.textContent = getAssignedTeacher(subject) || defaultTeacher;
-          const teacherMenu = document.createElement("div");
-          teacherMenu.className = "teacher-menu";
-          ["담임", "A교사", "B교사", "C교사", "D강사", "E강사"].forEach((teacherName) => {
-            const option = document.createElement("button");
-            option.type = "button";
-            option.className = "teacher-option";
-            option.textContent = teacherName;
-            option.addEventListener("click", () => {
-              subjectTeacherAssignments[subject] = teacherName;
-              teacherToggle.textContent = teacherName;
+          let teacherField = null;
+          if (subjectGroup === "specialist") {
+            teacherField = document.createElement("div");
+            teacherField.className = "auto-field";
+            const teacherTitle = document.createElement("span");
+            teacherTitle.className = "auto-field-title";
+            teacherTitle.textContent = "담당 교사";
+            const teacherPicker = document.createElement("div");
+            teacherPicker.className = "teacher-picker";
+            const teacherToggle = document.createElement("button");
+            teacherToggle.type = "button";
+            teacherToggle.className = "teacher-toggle";
+            const defaultTeacher = "A교사";
+            if (!subjectTeacherAssignments[subject]) {
+              subjectTeacherAssignments[subject] = defaultTeacher;
+            }
+            const existingTeacher = getAssignedTeacher(subject);
+            if (existingTeacher && !["담임", "A교사", "B교사", "C교사", "D강사", "E강사"].includes(existingTeacher)) {
+              customTeacherNames.add(existingTeacher);
+            }
+            teacherToggle.textContent = existingTeacher || defaultTeacher;
+            const teacherMenu = document.createElement("div");
+            teacherMenu.className = "teacher-menu";
+
+            const appendTeacherOption = (teacherName) => {
+              const option = document.createElement("button");
+              option.type = "button";
+              option.className = "teacher-option";
+              option.textContent = teacherName;
+              option.addEventListener("click", () => {
+                subjectTeacherAssignments[subject] = teacherName;
+                teacherToggle.textContent = teacherName;
+                teacherMenu.classList.remove("open");
+              });
+              teacherMenu.appendChild(option);
+            };
+
+            ["담임", "A교사", "B교사", "C교사", "D강사", "E강사"].forEach(appendTeacherOption);
+            Array.from(customTeacherNames).forEach(appendTeacherOption);
+
+            const customOption = document.createElement("button");
+            customOption.type = "button";
+            customOption.className = "teacher-option";
+            customOption.textContent = "직접 입력";
+            customOption.addEventListener("click", () => {
+              const customName = window.prompt("교사명을 입력하세요.");
+              const trimmed = (customName || "").trim();
+              if (!trimmed) return;
+              customTeacherNames.add(trimmed);
+              subjectTeacherAssignments[subject] = trimmed;
+              teacherToggle.textContent = trimmed;
               teacherMenu.classList.remove("open");
             });
-            teacherMenu.appendChild(option);
-          });
-          teacherToggle.addEventListener("click", () => {
-            teacherMenu.classList.toggle("open");
-          });
-          teacherPicker.append(teacherToggle, teacherMenu);
-          teacherField.append(teacherTitle, teacherPicker);
+            teacherMenu.appendChild(customOption);
+
+            teacherToggle.addEventListener("click", () => {
+              teacherMenu.classList.toggle("open");
+            });
+            teacherPicker.append(teacherToggle, teacherMenu);
+            teacherField.append(teacherTitle, teacherPicker);
+          } else if (!subjectTeacherAssignments[subject]) {
+            subjectTeacherAssignments[subject] = "담임";
+          }
 
           const seriesField = document.createElement("div");
           seriesField.className = "auto-field";
@@ -1484,8 +1636,8 @@
           const seriesSelect = document.createElement("select");
           seriesSelect.dataset.subjectSeries = subject;
           [
-            { value: "possible", text: "가능" },
-            { value: "impossible", text: "불가능" },
+            { value: "possible", text: "하루에 여러 시수 배치 허용" },
+            { value: "impossible", text: "하루에 1시수만 배치" },
             { value: "double", text: "2연차시" }
           ].forEach((series) => {
             const option = document.createElement("option");
@@ -1499,7 +1651,11 @@
           });
           seriesField.append(seriesTitle, seriesSelect);
 
-          row.append(label, hourField, teacherField, seriesField);
+          if (teacherField) {
+            row.append(label, hourField, teacherField, seriesField);
+          } else {
+            row.append(label, hourField, seriesField);
+          }
           autoGenerateRows.appendChild(row);
         };
 
@@ -1587,6 +1743,10 @@
           const title = document.createElement("h3");
           title.className = "specialist-title";
           title.textContent = `${tableName} 전담 시간표`;
+          const teacherName = getAssignedTeacher(tableName) || "미지정";
+          const teacherBadge = document.createElement("div");
+          teacherBadge.className = "specialist-teacher-badge";
+          teacherBadge.innerHTML = `(<span>담당 교사:</span> <strong style="color:${getTeacherColor(teacherName)}">${teacherName}</strong>)`;
 
           const table = document.createElement("table");
           const thead = document.createElement("thead");
@@ -1642,15 +1802,12 @@
               if (tableName === "체육") {
                 const peAssignments = getPeAssignmentsByPlace(day, period);
                 const assignmentLabels = [];
-                if (peAssignments.gym.length) {
-                  assignmentLabels.push(`강${peAssignments.gym.join(",")}`);
-                }
-                if (peAssignments.ground.length) {
-                  assignmentLabels.push(`운${peAssignments.ground.join(",")}`);
-                }
-                if (peAssignments.other.length) {
-                  assignmentLabels.push(`외${peAssignments.other.join(",")}`);
-                }
+                getAllPePlaceNames().forEach((placeName) => {
+                  const classesByPlace = peAssignments[placeName] || [];
+                  if (classesByPlace.length) {
+                    assignmentLabels.push(`${placeName[0]}${classesByPlace.join(",")}`);
+                  }
+                });
                 if (assignmentLabels.length) {
                   td.style.backgroundImage = "";
                   td.style.background = "#e5e7eb";
@@ -1665,18 +1822,11 @@
                 const peAvailability = getPeAvailability(day, period);
                 const peLabels = [];
                 const colors = [];
-                if (peAvailability.gym) {
-                  peLabels.push("강O");
-                  colors.push(pePlaceColorMap["강당"]);
-                }
-                if (peAvailability.ground) {
-                  peLabels.push("운O");
-                  colors.push(pePlaceColorMap["운동장"]);
-                }
-                if (peAvailability.other) {
-                  peLabels.push("외O");
-                  colors.push(pePlaceColorMap["그 외"]);
-                }
+                getAllPePlaceNames().forEach((placeName) => {
+                  if (!peAvailability[placeName]) return;
+                  peLabels.push(`${placeName[0]}O`);
+                  colors.push(pePlaceColorMap[placeName] || "#f9a8d4");
+                });
                 if (colors.length > 1) {
                   td.style.backgroundImage = buildMultiColorGradient(colors);
                 } else if (colors.length === 1) {
@@ -1755,7 +1905,7 @@
           });
 
           table.append(thead, tbody);
-          card.append(title, table);
+          card.append(title, teacherBadge, table);
           specialistGrid.appendChild(card);
         });
       }
@@ -1885,7 +2035,7 @@
 
           const nextTeacher = getAssignedTeacher(nextEntry.subject);
           const existingTeacher = getAssignedTeacher(existing.subject);
-          if (nextTeacher && existingTeacher && nextTeacher === existingTeacher) {
+          if (nextTeacher && existingTeacher && nextTeacher === existingTeacher && nextTeacher !== "담임") {
             return `${day} ${period}교시에는 이미 다른 반에 ${nextTeacher} 담당 과목(${existing.subject})이 배치되어 있습니다.`;
           }
         }
@@ -2004,10 +2154,8 @@
       function isSpecialistSlotAllowedByAvailability(subject, day, period, pePlace = "") {
         if (subject === "체육") {
           const peAvailability = getPeAvailability(day, period);
-          if (pePlace === "강당") return peAvailability.gym;
-          if (pePlace === "운동장") return peAvailability.ground;
-          if (pePlace === "그 외") return peAvailability.other;
-          return peAvailability.gym || peAvailability.ground || peAvailability.other;
+          if (pePlace) return Boolean(peAvailability[pePlace]);
+          return Object.values(peAvailability).some(Boolean);
         }
         const hasAnyAvailability = Object.keys(specialistAvailableSlots).some((key) =>
           key.startsWith(`${subject}__`)
@@ -2084,7 +2232,7 @@
             if (!specialistType && !canPlaceHomeroomSubjectAt(className, day, period, subject)) continue;
 
             if (subject === "체육") {
-              const orderedPePlaces = ["강당", "운동장", "그 외"].sort(
+              const orderedPePlaces = getAllPePlaceNames().sort(
                 (a, b) =>
                   getPePlaceAssignCountForClass(className, a) - getPePlaceAssignCountForClass(className, b)
               );
@@ -2179,61 +2327,7 @@
           return "연차시 조건 충돌(연속 가능한 시간대 부족)";
         }
         if (subject === PE_SUBJECT) {
-          const allPePlacesUsed = ["강당", "운동장", "그 외"].every((pePlace) =>
-            hasPePlaceAssignedForClass(className, pePlace)
-          );
-          if (allPePlacesUsed) {
-            return "같은 공간 체육 중복 금지 규칙으로 배치 불가";
-          }
-        }
-
-        let candidateCount = 0;
-        let afterDisabled = 0;
-        let afterOccupied = 0;
-        let afterExcluded = 0;
-        let afterAvailability = 0;
-        let afterDaily = 0;
-        let afterConflict = 0;
-        let afterConsecutive = 0;
-
-        for (let period = 1; period <= maxPeriodCount; period += 1) {
-          for (const day of days) {
-            candidateCount += 1;
-            if (isDisabledSlot(day, period)) continue;
-            afterDisabled += 1;
-            if (getEntry(className, day, period)) continue;
-            afterOccupied += 1;
-            if (countSubjectOnDayForClass(className, day, subject) >= getDailySubjectLimit(subject)) continue;
-            afterDaily += 1;
-            if (subjectType === "specialist" && specialistExcludedSlots.has(getCellKey(className, day, period))) continue;
-            afterExcluded += 1;
-            if (subjectType === "specialist" && !isSpecialistSlotAllowedByAvailability(subject, day, period)) continue;
-            afterAvailability += 1;
-            if (subjectType !== "specialist" && !canPlaceHomeroomSubjectAt(className, day, period, subject)) continue;
-            const nextEntry = { subject };
-            if (subjectType === "specialist" && hasSpecialistConflict(className, day, period, nextEntry, false)) continue;
-            afterConflict += 1;
-            if (subjectType === "specialist" && wouldCreateThreeConsecutiveSpecialists(className, day, period, nextEntry)) continue;
-            afterConsecutive += 1;
-          }
-        }
-
-        if (!afterDisabled) return "마지막 교시 X 등 비활성 슬롯으로 배치 칸 부족";
-        if (!afterOccupied) return "수동 확정값/기존 배치로 빈칸 부족";
-        if (!afterDaily) return "같은 날 동일 과목 횟수 제한으로 배치 불가";
-        if (subjectType === "specialist" && !afterExcluded) return "반별 시간표 전담 제외 칸 때문에 배치 불가";
-        if (subjectType === "specialist" && !afterAvailability) return "전담 O 가능 시간대 부족";
-        if (!afterConflict) return "동일 시간 전담 과목/담당 교사 중복 금지 충돌";
-        if (!afterConsecutive) return "전담 3연속 금지 규칙 충돌";
-        return `복합 제약으로 배치 불가(후보 ${afterConsecutive}/${candidateCount})`;
-      }
-
-      function explainAutoPlacementFailure(className, subject, subjectType = "specialist", bundleSize = 1) {
-        if (bundleSize > 1) {
-          return "연차시 조건 충돌(연속 가능한 시간대 부족)";
-        }
-        if (subject === PE_SUBJECT) {
-          const allPePlacesUsed = ["강당", "운동장", "그 외"].every((pePlace) =>
+          const allPePlacesUsed = getAllPePlaceNames().every((pePlace) =>
             hasPePlaceAssignedForClass(className, pePlace)
           );
           if (allPePlacesUsed) {
@@ -2628,12 +2722,13 @@
 
       function getPeAssignmentsByPlace(day, period) {
         const assignments = getSpecialistAssignmentsAtSlot("체육", day, period);
-        const grouped = { gym: [], ground: [], other: [] };
+        const grouped = {};
         assignments.forEach(({ className, entry }) => {
           const classNumber = className.replace("반", "");
-          if (entry?.pePlace === "강당") grouped.gym.push(classNumber);
-          if (entry?.pePlace === "운동장") grouped.ground.push(classNumber);
-          if (entry?.pePlace === "그 외") grouped.other.push(classNumber);
+          const placeName = entry?.pePlace;
+          if (!placeName) return;
+          if (!grouped[placeName]) grouped[placeName] = [];
+          grouped[placeName].push(classNumber);
         });
         return grouped;
       }
@@ -2652,8 +2747,8 @@
           const removedAssignment = clearPeAssignmentsAtSlot(day, period);
           if (removedAssignment) return true;
           const availability = getPeAvailability(day, period);
-          if (availability.gym || availability.ground || availability.other) {
-            setPeAvailability(day, period, { gym: false, ground: false, other: false });
+          if (Object.values(availability).some(Boolean)) {
+            setPeAvailability(day, period, {});
             return true;
           }
           return false;
@@ -2751,15 +2846,9 @@
         renderTimetables();
       }
 
-      function applyPeAvailabilitySelection(day, period, mode) {
+      function applyPeAvailabilitySelection(day, period, placeName) {
         const current = getPeAvailability(day, period);
-        if (mode === "gym") {
-          setPeAvailability(day, period, { gym: !current.gym, ground: current.ground, other: current.other });
-        } else if (mode === "ground") {
-          setPeAvailability(day, period, { gym: current.gym, ground: !current.ground, other: current.other });
-        } else if (mode === "other") {
-          setPeAvailability(day, period, { gym: current.gym, ground: current.ground, other: !current.other });
-        }
+        setPeAvailability(day, period, { ...current, [placeName]: !current[placeName] });
         renderTimetables();
       }
 
@@ -2809,36 +2898,56 @@
 
           const gymButton = document.createElement("button");
           gymButton.type = "button";
-          gymButton.className = `pe-quick-btn gym${peAvailability.gym ? "" : " inactive"}`;
+          gymButton.className = `pe-quick-btn gym${peAvailability["강당"] ? "" : " inactive"}`;
           gymButton.textContent = "강";
           gymButton.title = "강당 가능 토글";
           gymButton.addEventListener("click", (event) => {
             event.stopPropagation();
-            applyPeAvailabilitySelection(day, period, "gym");
+            applyPeAvailabilitySelection(day, period, "강당");
           });
           menu.appendChild(gymButton);
 
           const groundButton = document.createElement("button");
           groundButton.type = "button";
-          groundButton.className = `pe-quick-btn ground${peAvailability.ground ? "" : " inactive"}`;
+          groundButton.className = `pe-quick-btn ground${peAvailability["운동장"] ? "" : " inactive"}`;
           groundButton.textContent = "운";
           groundButton.title = "운동장 가능 토글";
           groundButton.addEventListener("click", (event) => {
             event.stopPropagation();
-            applyPeAvailabilitySelection(day, period, "ground");
+            applyPeAvailabilitySelection(day, period, "운동장");
           });
           menu.appendChild(groundButton);
 
-          const otherButton = document.createElement("button");
-          otherButton.type = "button";
-          otherButton.className = `pe-quick-btn other${peAvailability.other ? "" : " inactive"}`;
-          otherButton.textContent = "외";
-          otherButton.title = "그 외 가능 토글";
-          otherButton.addEventListener("click", (event) => {
-            event.stopPropagation();
-            applyPeAvailabilitySelection(day, period, "other");
+          customPePlaces.forEach((placeName) => {
+            const placeButton = document.createElement("button");
+            placeButton.type = "button";
+            placeButton.className = `pe-quick-btn other${peAvailability[placeName] ? "" : " inactive"}`;
+            placeButton.textContent = placeName;
+            placeButton.title = `${placeName} 가능 토글`;
+            placeButton.addEventListener("click", (event) => {
+              event.stopPropagation();
+              applyPeAvailabilitySelection(day, period, placeName);
+            });
+            menu.appendChild(placeButton);
           });
-          menu.appendChild(otherButton);
+
+          const addPlaceButton = document.createElement("button");
+          addPlaceButton.type = "button";
+          addPlaceButton.className = "pe-quick-btn other";
+          addPlaceButton.textContent = "직접 입력";
+          addPlaceButton.title = "새 장소 추가";
+          addPlaceButton.addEventListener("click", (event) => {
+            event.stopPropagation();
+            const placeName = window.prompt("새 체육 장소명을 입력하세요.");
+            const trimmed = (placeName || "").trim();
+            if (!trimmed) return;
+            if (!getAllPePlaceNames().includes(trimmed)) {
+              customPePlaces.push(trimmed);
+              if (!pePlaceColorMap[trimmed]) pePlaceColorMap[trimmed] = "#f9a8d4";
+            }
+            applyPeAvailabilitySelection(day, period, trimmed);
+          });
+          menu.appendChild(addPlaceButton);
         } else {
           renderOptions(async (classNumber) => {
             await applySpecialistDropdownSelection(tableName, day, period, classNumber);
@@ -2903,6 +3012,23 @@
         });
       }
 
+      function handleAddCustomSubject(targetType = "specialist") {
+        const subjectName = window.prompt("새 과목명을 입력하세요.");
+        const normalized = registerCustomSubject(subjectName);
+        if (!normalized) return;
+        if (targetType === "specialist") {
+          selectedSpecialists.add(normalized);
+          selectedHomerooms.delete(normalized);
+        } else {
+          selectedHomerooms.add(normalized);
+          selectedSpecialists.delete(normalized);
+        }
+        applySpecialistSlotColors();
+        renderSpecialistTimetables();
+        renderSpecialistOptions(subjectOptions, selectedSpecialists, selectedHomerooms);
+        renderSpecialistOptions(homeroomOptions, selectedHomerooms, selectedSpecialists);
+      }
+
       function setupSpecialistDropdown() {
         specialistToggle.addEventListener("click", () => {
           const open = specialistMenu.classList.toggle("open");
@@ -2930,15 +3056,18 @@
             homeroomToggle.setAttribute("aria-expanded", "false");
           }
         });
+
+        addSpecialistSubjectBtn.addEventListener("click", (event) => {
+          event.stopPropagation();
+          handleAddCustomSubject("specialist");
+        });
+        addHomeroomSubjectBtn.addEventListener("click", (event) => {
+          event.stopPropagation();
+          handleAddCustomSubject("homeroom");
+        });
       }
 
       function setupPePicker() {
-        pePickerModal.querySelectorAll("[data-pe-place]").forEach((button) => {
-          button.addEventListener("click", () => {
-            closePePlacePicker(button.dataset.pePlace);
-          });
-        });
-
         pePickerCancel.addEventListener("click", () => {
           closePePlacePicker(null);
         });
