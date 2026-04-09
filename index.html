@@ -339,6 +339,10 @@
         background: #f9a8d4;
       }
 
+      .pe-picker-actions .other-btn {
+        background: #f9a8d4;
+      }
+
       .pe-picker-cancel {
         margin-top: 8px;
         width: 100%;
@@ -381,7 +385,7 @@
 
       .auto-row {
         display: grid;
-        grid-template-columns: 1.2fr 110px 220px 190px;
+        grid-template-columns: 1fr auto auto auto;
         align-items: center;
         gap: 10px;
         margin-bottom: 8px;
@@ -393,10 +397,16 @@
 
       .auto-row input,
       .auto-row select {
-        width: 100%;
+        width: auto;
+        min-width: 78px;
+        max-width: 100%;
         border: 1px solid var(--line);
         border-radius: 7px;
         padding: 5px 7px;
+      }
+
+      .custom-hour-input {
+        display: none;
       }
 
       .custom-hour-input {
@@ -523,12 +533,22 @@
         margin: 8px 0 10px;
       }
 
+      .auto-specialist-label {
+        color: #7c3aed;
+      }
+
+      .auto-subject-divider {
+        border-top: 1px dashed #c4b5fd;
+        margin: 8px 0 10px;
+      }
+
       .teacher-picker {
         position: relative;
       }
 
       .teacher-toggle {
-        width: 100%;
+        width: auto;
+        min-width: 84px;
         border: 1px solid var(--line);
         border-radius: 7px;
         background: #fff;
@@ -588,6 +608,42 @@
         padding: 7px 8px;
         text-align: left;
         cursor: pointer;
+      }
+
+      .pe-quick-menu {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+        min-width: 186px;
+        max-height: none;
+        overflow: visible;
+      }
+
+      .pe-quick-btn {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 7px 6px;
+        font-weight: 800;
+        font-size: 0.65rem;
+        cursor: pointer;
+        color: #111827;
+      }
+
+      .pe-quick-btn.gym {
+        background: #86efac;
+      }
+
+      .pe-quick-btn.ground {
+        background: #c4b5fd;
+      }
+
+      .pe-quick-btn.other {
+        background: #f9a8d4;
+      }
+
+      .pe-quick-btn.inactive {
+        opacity: 0.35;
       }
 
       .pe-quick-menu {
@@ -1111,6 +1167,10 @@
         overflow: visible;
       }
 
+      .specialist-card td {
+        overflow: visible;
+      }
+
       .conflict-modal {
         position: fixed;
         inset: 0;
@@ -1154,6 +1214,14 @@
         text-align: center;
         font-size: 0.98rem;
         background: #eef2ff;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .specialist-teacher-badge {
+        font-size: 0.78rem;
+        text-align: center;
+        padding: 4px 8px 6px;
+        background: #f8fafc;
         border-bottom: 1px solid var(--line);
       }
 
@@ -1267,7 +1335,7 @@
           <label for="specialistToggle">전담 과목</label>
           <div class="specialist-picker">
             <button id="specialistToggle" class="specialist-toggle" type="button" aria-expanded="false">
-              전담 과목 선택 (복수 선택)
+              전담 과목 선택 (특별실, 전담교사)
             </button>
             <div id="specialistMenu" class="specialist-menu" role="listbox" aria-multiselectable="true">
               <button id="addSpecialistSubjectBtn" type="button" class="add-subject-btn">+ 직접 입력</button>
@@ -1280,7 +1348,7 @@
           <label for="homeroomToggle">담임 과목</label>
           <div class="specialist-picker">
             <button id="homeroomToggle" class="specialist-toggle" type="button" aria-expanded="false">
-              담임 과목 선택 (복수 선택)
+              담임 과목 선택
             </button>
             <div id="homeroomMenu" class="specialist-menu" role="listbox" aria-multiselectable="true">
               <button id="addHomeroomSubjectBtn" type="button" class="add-subject-btn">+ 직접 입력</button>
@@ -1428,7 +1496,7 @@
       const autoGenerateSubjectCounts = {};
       const autoGenerateSubjectSeries = {};
       const subjectTeacherAssignments = {};
-      const teacherOptions = ["담임", "A교사"];
+      const teacherOptions = ["담임"];
       const customPePlaces = [];
       const specialistAvailableSlots = {};
       const peAvailableSlots = {};
@@ -1802,7 +1870,7 @@
             const teacherToggle = document.createElement("button");
             teacherToggle.type = "button";
             teacherToggle.className = "teacher-toggle";
-            const defaultTeacher = "A교사";
+            const defaultTeacher = "담임";
             if (!subjectTeacherAssignments[subject]) {
               subjectTeacherAssignments[subject] = defaultTeacher;
             }
@@ -1813,6 +1881,11 @@
             teacherToggle.textContent = existingTeacher || defaultTeacher;
             const teacherMenu = document.createElement("div");
             teacherMenu.className = "teacher-menu";
+            const customTeacherInput = document.createElement("input");
+            customTeacherInput.type = "text";
+            customTeacherInput.placeholder = "교사명 입력";
+            customTeacherInput.style.display = "none";
+            customTeacherInput.style.marginTop = "4px";
 
             const appendTeacherOption = (teacherName) => {
               if (!teacherName) return;
@@ -1827,6 +1900,7 @@
                 subjectTeacherAssignments[subject] = teacherName;
                 teacherToggle.textContent = teacherName;
                 teacherMenu.classList.remove("open");
+                customTeacherInput.style.display = "none";
                 renderSpecialistTimetables();
               });
               teacherMenu.appendChild(option);
@@ -1839,15 +1913,22 @@
             customOption.className = "teacher-option";
             customOption.textContent = "직접 입력";
             customOption.addEventListener("click", () => {
-              const customName = window.prompt("교사명을 입력하세요.");
-              const trimmed = addTeacherOption(customName);
+              customTeacherInput.style.display = "block";
+              customTeacherInput.value = "";
+              customTeacherInput.focus();
+            });
+            teacherMenu.appendChild(customOption);
+            customTeacherInput.addEventListener("keydown", (event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              const trimmed = addTeacherOption(customTeacherInput.value);
               if (!trimmed) return;
               subjectTeacherAssignments[subject] = trimmed;
               autoGenerateRows.querySelectorAll(".teacher-menu.open").forEach((menu) => menu.classList.remove("open"));
               renderAutoGenerateRows();
               renderSpecialistTimetables();
             });
-            teacherMenu.appendChild(customOption);
+            teacherPicker.append(customTeacherInput);
 
             teacherToggle.addEventListener("click", () => {
               teacherMenu.classList.toggle("open");
@@ -3076,6 +3157,12 @@
         } else {
           specialistAvailableSlots[slotKey] = true;
         }
+        renderTimetables();
+      }
+
+      function applyPeAvailabilitySelection(day, period, placeName) {
+        const current = getPeAvailability(day, period);
+        setPeAvailability(day, period, { ...current, [placeName]: !current[placeName] });
         renderTimetables();
       }
 
