@@ -327,6 +327,10 @@
         background: #f9a8d4;
       }
 
+      .pe-picker-actions .other-btn {
+        background: #f9a8d4;
+      }
+
       .pe-picker-cancel {
         margin-top: 8px;
         width: 100%;
@@ -352,7 +356,7 @@
       }
 
       .auto-dialog {
-        width: min(92vw, 420px);
+        width: min(96vw, 760px);
         max-height: 80vh;
         overflow: auto;
         background: #fff;
@@ -369,7 +373,7 @@
 
       .auto-row {
         display: grid;
-        grid-template-columns: 1fr 90px 150px 80px;
+        grid-template-columns: 1.2fr 110px 220px 190px;
         align-items: center;
         gap: 10px;
         margin-bottom: 8px;
@@ -407,6 +411,10 @@
         display: none;
       }
 
+      .custom-hour-input {
+        display: none;
+      }
+
       .auto-field {
         display: grid;
         gap: 2px;
@@ -416,6 +424,15 @@
         font-size: 0.72rem;
         color: #6b7280;
         font-weight: 700;
+      }
+
+      .auto-specialist-label {
+        color: #7c3aed;
+      }
+
+      .auto-subject-divider {
+        border-top: 1px dashed #c4b5fd;
+        margin: 8px 0 10px;
       }
 
       .auto-specialist-label {
@@ -537,6 +554,42 @@
         padding: 7px 8px;
         text-align: left;
         cursor: pointer;
+      }
+
+      .pe-quick-menu {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+        min-width: 186px;
+        max-height: none;
+        overflow: visible;
+      }
+
+      .pe-quick-btn {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 7px 6px;
+        font-weight: 800;
+        font-size: 0.65rem;
+        cursor: pointer;
+        color: #111827;
+      }
+
+      .pe-quick-btn.gym {
+        background: #86efac;
+      }
+
+      .pe-quick-btn.ground {
+        background: #c4b5fd;
+      }
+
+      .pe-quick-btn.other {
+        background: #f9a8d4;
+      }
+
+      .pe-quick-btn.inactive {
+        opacity: 0.35;
       }
 
       .pe-quick-menu {
@@ -940,6 +993,10 @@
         overflow: visible;
       }
 
+      .specialist-card td {
+        overflow: visible;
+      }
+
       .conflict-modal {
         position: fixed;
         inset: 0;
@@ -983,6 +1040,14 @@
         text-align: center;
         font-size: 0.98rem;
         background: #eef2ff;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .specialist-teacher-badge {
+        font-size: 0.78rem;
+        text-align: center;
+        padding: 4px 8px 6px;
+        background: #f8fafc;
         border-bottom: 1px solid var(--line);
       }
 
@@ -1244,7 +1309,8 @@
         운동장: "#c4b5fd"
       };
       const customSubjectColorPalette = ["#f9a8d4", "#fde68a", "#93c5fd", "#86efac", "#c4b5fd", "#fdba74"];
-      const customTeacherColorPalette = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"];
+      const customPePlaceColorPalette = ["#f9a8d4", "#fb7185", "#f97316", "#f59e0b", "#14b8a6", "#3b82f6", "#8b5cf6", "#e879f9"];
+      const teacherColorPalette = ["#ef4444", "#f97316", "#22c55e", "#3b82f6", "#8b5cf6", "#06b6d4", "#e11d48", "#84cc16"];
       let pePickerResolver = null;
       let conflictConfirmResolver = null;
 
@@ -1261,9 +1327,24 @@
 
       function getTeacherColor(name = "") {
         if (!name) return "#6b7280";
+        if (name === "담임") return "#111111";
         let hash = 0;
         for (let i = 0; i < name.length; i += 1) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
-        return customTeacherColorPalette[hash % customTeacherColorPalette.length];
+        return teacherColorPalette[hash % teacherColorPalette.length];
+      }
+
+      function ensurePePlaceColor(placeName) {
+        if (!placeName) return;
+        if (pePlaceColorMap[placeName]) return;
+        const usedColors = new Set(Object.values(pePlaceColorMap));
+        const available = customPePlaceColorPalette.find((color) => !usedColors.has(color));
+        if (available) {
+          pePlaceColorMap[placeName] = available;
+          return;
+        }
+        let hash = 0;
+        for (let i = 0; i < placeName.length; i += 1) hash = (hash * 31 + placeName.charCodeAt(i)) >>> 0;
+        pePlaceColorMap[placeName] = customPePlaceColorPalette[hash % customPePlaceColorPalette.length];
       }
 
       function registerCustomSubject(subjectName) {
@@ -1366,6 +1447,10 @@
       }
 
       function openPePlacePicker(defaultValue = "강당") {
+        if (!pePickerActions) {
+          const fallback = window.prompt("체육 장소를 입력하세요.", defaultValue || "강당");
+          return Promise.resolve((fallback || "").trim() || null);
+        }
         pePickerActions.innerHTML = "";
         const appendPlaceButton = (placeName, className = "") => {
           const button = document.createElement("button");
@@ -1391,7 +1476,7 @@
           if (!trimmed) return;
           if (!getAllPePlaceNames().includes(trimmed)) {
             customPePlaces.push(trimmed);
-            if (!pePlaceColorMap[trimmed]) pePlaceColorMap[trimmed] = "#f9a8d4";
+            ensurePePlaceColor(trimmed);
           }
           closePePlacePicker(trimmed);
         });
@@ -1576,12 +1661,12 @@
             const teacherToggle = document.createElement("button");
             teacherToggle.type = "button";
             teacherToggle.className = "teacher-toggle";
-            const defaultTeacher = "A교사";
+            const defaultTeacher = "담임";
             if (!subjectTeacherAssignments[subject]) {
               subjectTeacherAssignments[subject] = defaultTeacher;
             }
             const existingTeacher = getAssignedTeacher(subject);
-            if (existingTeacher && !["담임", "A교사", "B교사", "C교사", "D강사", "E강사"].includes(existingTeacher)) {
+            if (existingTeacher && existingTeacher !== "담임") {
               customTeacherNames.add(existingTeacher);
             }
             teacherToggle.textContent = existingTeacher || defaultTeacher;
@@ -1601,7 +1686,7 @@
               teacherMenu.appendChild(option);
             };
 
-            ["담임", "A교사", "B교사", "C교사", "D강사", "E강사"].forEach(appendTeacherOption);
+            ["담임"].forEach(appendTeacherOption);
             Array.from(customTeacherNames).forEach(appendTeacherOption);
 
             const customOption = document.createElement("button");
@@ -2852,6 +2937,12 @@
         renderTimetables();
       }
 
+      function applyPeAvailabilitySelection(day, period, placeName) {
+        const current = getPeAvailability(day, period);
+        setPeAvailability(day, period, { ...current, [placeName]: !current[placeName] });
+        renderTimetables();
+      }
+
       function editSpecialistCell(cell, tableName, day, period) {
         document.querySelectorAll(".class-select-menu").forEach((menu) => menu.remove());
 
@@ -2943,7 +3034,7 @@
             if (!trimmed) return;
             if (!getAllPePlaceNames().includes(trimmed)) {
               customPePlaces.push(trimmed);
-              if (!pePlaceColorMap[trimmed]) pePlaceColorMap[trimmed] = "#f9a8d4";
+              ensurePePlaceColor(trimmed);
             }
             applyPeAvailabilitySelection(day, period, trimmed);
           });
@@ -3057,17 +3148,22 @@
           }
         });
 
-        addSpecialistSubjectBtn.addEventListener("click", (event) => {
-          event.stopPropagation();
-          handleAddCustomSubject("specialist");
-        });
-        addHomeroomSubjectBtn.addEventListener("click", (event) => {
-          event.stopPropagation();
-          handleAddCustomSubject("homeroom");
-        });
+        if (addSpecialistSubjectBtn) {
+          addSpecialistSubjectBtn.addEventListener("click", (event) => {
+            event.stopPropagation();
+            handleAddCustomSubject("specialist");
+          });
+        }
+        if (addHomeroomSubjectBtn) {
+          addHomeroomSubjectBtn.addEventListener("click", (event) => {
+            event.stopPropagation();
+            handleAddCustomSubject("homeroom");
+          });
+        }
       }
 
       function setupPePicker() {
+        if (!pePickerModal || !pePickerCancel) return;
         pePickerCancel.addEventListener("click", () => {
           closePePlacePicker(null);
         });
