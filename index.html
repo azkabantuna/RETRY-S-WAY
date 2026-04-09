@@ -343,6 +343,10 @@
         background: #f9a8d4;
       }
 
+      .pe-picker-actions .other-btn {
+        background: #f9a8d4;
+      }
+
       .pe-picker-cancel {
         margin-top: 8px;
         width: 100%;
@@ -441,6 +445,10 @@
         display: none;
       }
 
+      .custom-hour-input {
+        display: none;
+      }
+
       .auto-field {
         display: grid;
         gap: 2px;
@@ -450,6 +458,15 @@
         font-size: 0.72rem;
         color: #6b7280;
         font-weight: 700;
+      }
+
+      .auto-specialist-label {
+        color: #7c3aed;
+      }
+
+      .auto-subject-divider {
+        border-top: 1px dashed #c4b5fd;
+        margin: 8px 0 10px;
       }
 
       .auto-specialist-label {
@@ -608,6 +625,42 @@
         padding: 7px 8px;
         text-align: left;
         cursor: pointer;
+      }
+
+      .pe-quick-menu {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6px;
+        padding: 8px;
+        min-width: 186px;
+        max-height: none;
+        overflow: visible;
+      }
+
+      .pe-quick-btn {
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 7px 6px;
+        font-weight: 800;
+        font-size: 0.65rem;
+        cursor: pointer;
+        color: #111827;
+      }
+
+      .pe-quick-btn.gym {
+        background: #86efac;
+      }
+
+      .pe-quick-btn.ground {
+        background: #c4b5fd;
+      }
+
+      .pe-quick-btn.other {
+        background: #f9a8d4;
+      }
+
+      .pe-quick-btn.inactive {
+        opacity: 0.35;
       }
 
       .pe-quick-menu {
@@ -1171,6 +1224,10 @@
         overflow: visible;
       }
 
+      .specialist-card td {
+        overflow: visible;
+      }
+
       .conflict-modal {
         position: fixed;
         inset: 0;
@@ -1257,6 +1314,14 @@
         border-bottom: 1px solid var(--line);
       }
 
+      .specialist-teacher-badge {
+        font-size: 0.78rem;
+        text-align: center;
+        padding: 4px 8px 6px;
+        background: #f8fafc;
+        border-bottom: 1px solid var(--line);
+      }
+
       .credit-note {
         margin-top: 6px;
         font-size: 0.45rem;
@@ -1278,6 +1343,12 @@
         color: #dc2626 !important;
         font-weight: 700 !important;
         cursor: not-allowed !important;
+      }
+
+      .holiday-slot {
+        background: #fee2e2 !important;
+        color: #dc2626 !important;
+        font-weight: 700 !important;
       }
 
       .auto-excluded-slot {
@@ -1400,6 +1471,22 @@
             <tbody id="lastPeriodBody"></tbody>
           </table>
         </section>
+        <section class="last-period-config" aria-label="요일별 휴일 여부">
+          <h3>요일별 휴일 여부 (클릭 시 휴일 표시)</h3>
+          <table class="last-period-table">
+            <thead>
+              <tr>
+                <th>구분</th>
+                <th>월</th>
+                <th>화</th>
+                <th>수</th>
+                <th>목</th>
+                <th>금</th>
+              </tr>
+            </thead>
+            <tbody id="holidayBody"></tbody>
+          </table>
+        </section>
         <div class="auto-actions">
           <button type="button" id="autoGenerateRunBtn" class="run-btn">자동 생성 실행</button>
           <button type="button" id="autoGenerateCancelBtn">취소</button>
@@ -1435,6 +1522,18 @@
         "창체",
         "자율",
         "동아리"
+      ];
+      const baseSubjectOrder = [
+        "국어",
+        "사회",
+        "도덕",
+        "수학",
+        "과학",
+        "체육",
+        "음악",
+        "미술",
+        "영어",
+        "자율"
       ];
       const specialistSubjectColors = [
         "#fde68a",
@@ -1482,6 +1581,7 @@
       const autoGenerateRunBtn = document.getElementById("autoGenerateRunBtn");
       const autoGenerateCancelBtn = document.getElementById("autoGenerateCancelBtn");
       const lastPeriodBody = document.getElementById("lastPeriodBody");
+      const holidayBody = document.getElementById("holidayBody");
       const conflictConfirmModal = document.getElementById("conflictConfirmModal");
       const conflictProceedBtn = document.getElementById("conflictProceedBtn");
       const conflictCancelBtn = document.getElementById("conflictCancelBtn");
@@ -1493,6 +1593,7 @@
       const selectedSpecialists = new Set();
       const selectedHomerooms = new Set();
       const disabledLastPeriodDays = new Set();
+      const holidayDays = new Set();
       const autoGenerateSubjectCounts = {};
       const autoGenerateSubjectSeries = {};
       const subjectTeacherAssignments = {};
@@ -1524,6 +1625,19 @@
       const getSpecialistSlotKey = (subject, day, period) => `${subject}__${day}__${period}`;
       const getPeSlotKey = (day, period) => `${day}__${period}`;
       const getAllPePlaceNames = () => ["강당", "운동장", ...customPePlaces];
+
+      function subjectOrderRank(subject) {
+        const index = baseSubjectOrder.indexOf(subject);
+        return index >= 0 ? index : baseSubjectOrder.length + 100;
+      }
+
+      function sortSubjectsByBaseOrder(subjects) {
+        return [...subjects].sort((a, b) => {
+          const rankDiff = subjectOrderRank(a) - subjectOrderRank(b);
+          if (rankDiff !== 0) return rankDiff;
+          return a.localeCompare(b, "ko");
+        });
+      }
 
       function getTeacherColor(name = "") {
         if (!name) return "#6b7280";
@@ -1720,7 +1834,7 @@
       }
 
       function isDisabledSlot(day, period) {
-        return period === maxPeriodCount && disabledLastPeriodDays.has(day);
+        return holidayDays.has(day) || (period === maxPeriodCount && disabledLastPeriodDays.has(day));
       }
 
       function clearDisabledLastPeriodEntriesForDay(day) {
@@ -1731,9 +1845,23 @@
         }
       }
 
+      function clearHolidayEntriesForDay(day) {
+        const classes = buildClasses(classCount);
+        for (const className of classes) {
+          for (let period = 1; period <= maxPeriodCount; period += 1) {
+            const key = getCellKey(className, day, period);
+            delete subjectStore[key];
+            specialistExcludedSlots.delete(key);
+          }
+        }
+      }
+
       function clearAllDisabledSlotEntries() {
         disabledLastPeriodDays.forEach((day) => {
           clearDisabledLastPeriodEntriesForDay(day);
+        });
+        holidayDays.forEach((day) => {
+          clearHolidayEntriesForDay(day);
         });
       }
 
@@ -1771,6 +1899,37 @@
         lastPeriodBody.appendChild(row);
       }
 
+      function renderHolidayToggleRow() {
+        holidayBody.innerHTML = "";
+        const row = document.createElement("tr");
+        const labelCell = document.createElement("th");
+        labelCell.textContent = "요일";
+        row.appendChild(labelCell);
+        days.forEach((day) => {
+          const cell = document.createElement("td");
+          cell.className = "last-period-toggle";
+          const isHoliday = holidayDays.has(day);
+          if (isHoliday) {
+            cell.classList.add("holiday-slot");
+            cell.textContent = "휴일";
+          } else {
+            cell.textContent = "사용";
+          }
+          cell.addEventListener("click", () => {
+            if (holidayDays.has(day)) {
+              holidayDays.delete(day);
+            } else {
+              holidayDays.add(day);
+              clearHolidayEntriesForDay(day);
+            }
+            renderHolidayToggleRow();
+            renderTimetables();
+          });
+          row.appendChild(cell);
+        });
+        holidayBody.appendChild(row);
+      }
+
       function addTeacherOption(name) {
         const trimmed = (name || "").trim();
         if (!trimmed) return "";
@@ -1781,8 +1940,10 @@
       }
 
       function renderAutoGenerateRows() {
-        const specialistList = Array.from(selectedSpecialists);
-        const homeroomList = Array.from(selectedHomerooms).filter((subject) => !selectedSpecialists.has(subject));
+        const specialistList = sortSubjectsByBaseOrder(Array.from(selectedSpecialists));
+        const homeroomList = sortSubjectsByBaseOrder(
+          Array.from(selectedHomerooms).filter((subject) => !selectedSpecialists.has(subject))
+        );
         autoGenerateRows.innerHTML = "";
 
         const renderRow = (subject, subjectGroup) => {
@@ -1982,6 +2143,7 @@
       function openAutoGenerateModal() {
         renderAutoGenerateRows();
         renderLastPeriodToggleRow();
+        renderHolidayToggleRow();
         autoGenerateModal.classList.add("open");
         autoGenerateModal.setAttribute("aria-hidden", "false");
       }
@@ -2019,7 +2181,7 @@
       }
 
       function getSpecialistTableNames() {
-        return Array.from(selectedSpecialists);
+        return sortSubjectsByBaseOrder(Array.from(selectedSpecialists));
       }
 
       function getEntryTableName(entry) {
@@ -2091,7 +2253,12 @@
 
               if (isDisabled) {
                 td.classList.add("disabled-slot");
-                td.textContent = "X";
+                if (holidayDays.has(day)) {
+                  td.classList.add("holiday-slot");
+                  td.textContent = "휴일";
+                } else {
+                  td.textContent = "X";
+                }
                 row.appendChild(td);
                 return;
               }
@@ -2260,13 +2427,20 @@
           if (disabled) {
             clearRestrictionHints(cell);
             cell.classList.add("disabled-slot");
-            cell.textContent = "X";
+            if (holidayDays.has(day)) {
+              cell.classList.add("holiday-slot");
+              cell.textContent = "휴일";
+            } else {
+              cell.classList.remove("holiday-slot");
+              cell.textContent = "X";
+            }
             cell.style.backgroundImage = "";
             cell.style.backgroundColor = "";
             cell.style.textDecoration = "none";
             return;
           }
           cell.classList.remove("disabled-slot");
+          cell.classList.remove("holiday-slot");
 
           const entry = getEntry(className, day, period);
           const slotRefs = getSlotSpecialistReferences(day, period);
@@ -2720,8 +2894,12 @@
         });
         const subjectsToClear = Object.keys(targetCounts);
         const classes = buildClasses(classCount);
-        const specialistSubjectsToAssign = Object.keys(targetCounts).filter((subject) => selectedSpecialists.has(subject));
-        const homeroomSubjectsToAssign = Object.keys(targetCounts).filter((subject) => selectedHomerooms.has(subject));
+        const specialistSubjectsToAssign = sortSubjectsByBaseOrder(
+          Object.keys(targetCounts).filter((subject) => selectedSpecialists.has(subject))
+        );
+        const homeroomSubjectsToAssign = sortSubjectsByBaseOrder(
+          Object.keys(targetCounts).filter((subject) => selectedHomerooms.has(subject))
+        );
 
         const runSingleAttempt = async () => {
           const specialistShortages = [];
@@ -2933,7 +3111,12 @@
             cell.dataset.period = String(period);
             if (isDisabled) {
               cell.classList.add("disabled-slot");
-              cell.textContent = "X";
+              if (holidayDays.has(day)) {
+                cell.classList.add("holiday-slot");
+                cell.textContent = "휴일";
+              } else {
+                cell.textContent = "X";
+              }
             } else {
               cell.textContent = getEntryDisplayText(currentEntry);
             }
@@ -3190,6 +3373,12 @@
         renderTimetables();
       }
 
+      function applyPeAvailabilitySelection(day, period, placeName) {
+        const current = getPeAvailability(day, period);
+        setPeAvailability(day, period, { ...current, [placeName]: !current[placeName] });
+        renderTimetables();
+      }
+
       function editSpecialistCell(cell, tableName, day, period) {
         document.querySelectorAll(".class-select-menu").forEach((menu) => menu.remove());
 
@@ -3317,7 +3506,9 @@
       function renderSpecialistOptions(targetContainer, selectedSet, oppositeSet) {
         targetContainer.innerHTML = "";
 
-        specialistSubjects.forEach((subject) => {
+        sortSubjectsByBaseOrder(specialistSubjects.map((item) => item.name)).forEach((subjectName) => {
+          const subject = specialistSubjects.find((item) => item.name === subjectName);
+          if (!subject) return;
           if (subject.name === PE_SUBJECT) return;
           if (!selectedSet.has(subject.name) && oppositeSet.has(subject.name)) return;
           const label = document.createElement("label");
