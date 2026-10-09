@@ -1465,6 +1465,66 @@
           grid-template-columns: repeat(1, minmax(220px, 1fr));
         }
       }
+
+      /* 질문형 튜토리얼 (qt-) */
+      .qt-start-btn {
+        margin-left: 8px;
+        border: 1px solid #fcd34d;
+        border-radius: 999px;
+        background: #fef3c7;
+        color: #92400e;
+        padding: 7px 14px;
+        font-size: 0.9rem;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      .tutorial-launch { flex-wrap: wrap; row-gap: 6px; }
+      .qt-highlight {
+        outline: 3px solid #f59e0b;
+        outline-offset: 2px;
+        box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.28);
+        scroll-margin: 16px;
+      }
+      .qt-box {
+        position: fixed;
+        z-index: 400;
+        left: 12px;
+        top: 12px;
+        width: min(360px, calc(100vw - 24px));
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        border: 2px solid #f59e0b;
+        border-radius: 14px;
+        padding: 12px;
+        box-shadow: 0 12px 34px rgba(15, 23, 42, 0.3);
+      }
+      .qt-box[hidden] { display: none; }
+      #qtDim[hidden] { display: none; }
+      #qtDim div { position: fixed; z-index: 390; background: rgba(15, 23, 42, 0.62); pointer-events: auto; }
+      .qt-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-weight: 800; color: #92400e; font-size: 0.85rem; }
+      .qt-step { overflow-y: auto; min-height: 0; }
+      .qt-step h3 { margin: 0 0 6px; font-size: 1rem; color: #1d4ed8; }
+      .qt-hint { margin: 8px 0 0; font-size: 0.82rem; line-height: 1.4; color: #475569; }
+      .qt-choices { display: flex; flex-wrap: wrap; gap: 6px; }
+      .qt-choices button, .qt-actions button {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 6px 10px;
+        min-width: 36px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .qt-choices button[aria-pressed="true"] { background: #2563eb; border-color: #2563eb; color: #fff; }
+      .qt-checks { display: flex; flex-wrap: wrap; gap: 6px; }
+      .qt-check { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 0.88rem; }
+      .qt-rules { margin: 8px 0 0; padding: 0; list-style: none; font-size: 0.8rem; line-height: 1.35; }
+      .qt-rules li { margin-bottom: 4px; }
+      .qt-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+      .qt-actions button:disabled { opacity: 0.45; cursor: default; }
+      .qt-actions .primary { background: #2563eb; border-color: #2563eb; color: #fff; }
     </style>
   </head>
   <body>
@@ -1472,6 +1532,7 @@
       <h1>학급별 주간 시간표</h1>
       <div class="tutorial-launch">
         <button id="tutorialStartBtn" class="tutorial-start-btn" type="button">사용법 보기</button>
+        <button id="quizTutorialStartBtn" class="qt-start-btn" data-testid="quiz-start" type="button">질문으로 설정하기</button>
       </div>
       <section class="usage-guide" aria-label="사용 방법 안내">
         <ol>
@@ -1601,6 +1662,16 @@
           <button type="button" id="conflictProceedBtn">진행한다</button>
           <button type="button" id="conflictCancelBtn">아니다</button>
         </div>
+      </div>
+    </div>
+
+    <div id="quizTutorial" class="qt-box" role="dialog" aria-label="질문으로 설정하기" aria-live="polite" tabindex="-1" hidden>
+      <div class="qt-head"><span>질문으로 설정하기</span><span id="qtProgress" data-testid="quiz-progress"></span></div>
+      <div id="qtStep" class="qt-step"></div>
+      <div class="qt-actions">
+        <button type="button" id="qtPrev" data-testid="quiz-prev">이전</button>
+        <button type="button" id="qtNext" data-testid="quiz-next" class="primary">다음</button>
+        <button type="button" id="qtClose" data-testid="quiz-close">닫기</button>
       </div>
     </div>
 
@@ -4195,6 +4266,384 @@
         if (!tutorialStartBtn) return;
         tutorialStartBtn.addEventListener("click", startTutorial);
       }
+      // ===== 질문형 튜토리얼: 질문 하나씩 답하면 진짜 컨트롤 값이 바뀐다 =====
+      const quizTutorialSteps = [
+        {
+          key: "classCount",
+          title: "반 개수",
+          question: "우리 학교는 몇 반인가요?",
+          hint: "강조된 '반 개수' 칸에서 나중에도 바꿀 수 있어요.",
+          target: () => classCountSelect.closest(".control-group"),
+          render: (body) => {
+            const box = document.createElement("div");
+            box.className = "qt-choices";
+            const buttons = [];
+            for (let n = 1; n <= 12; n += 1) {
+              const btn = document.createElement("button");
+              btn.type = "button";
+              btn.textContent = String(n);
+              btn.setAttribute("data-qt-option", String(n));
+              btn.addEventListener("click", () => this_apply(n));
+              buttons.push(btn);
+              box.appendChild(btn);
+            }
+            const this_apply = (n) => { quizTutorialSteps[0].apply(n); sync(); };
+            const sync = () => buttons.forEach((btn) => btn.setAttribute("aria-pressed", String(Number(btn.textContent) === classCount)));
+            body.appendChild(box);
+            sync();
+            quizTutorialSteps[0].sync = sync;
+          },
+          apply: (n) => {
+            classCountSelect.value = String(n);
+            classCountSelect.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        },
+        {
+          key: "specialist",
+          title: "전담 과목",
+          question: "전담 선생님이 가르치는 과목을 고르세요. (체육은 자동 포함)",
+          hint: "강조된 '전담 과목' 버튼을 누르면 같은 목록이 열려요. 아래 세 가지 중복 방지는 항상 켜져 있어요.",
+          target: () => specialistToggle.closest(".control-group"),
+          menu: () => specialistMenu,
+          render: (body) => {
+            renderQuizSubjectChecks(body, subjectOptions, quizTutorialSteps[1]);
+            const rules = document.createElement("ul");
+            rules.className = "qt-rules";
+            [
+              ["subject", "과목 중복 ×", "같은 시간에 같은 전담 과목이 두 반에 겹치지 않아요."],
+              ["teacher", "강사 중복 ×", "같은 담당 교사가 같은 시간에 두 반을 맡지 않아요."],
+              ["space", "공간 중복 ×", "체육 강당·운동장 같은 장소는 같은 시간에 한 반만 써요."]
+            ].forEach(([id, name, text]) => {
+              const li = document.createElement("li");
+              const label = document.createElement("label");
+              const input = document.createElement("input");
+              input.type = "checkbox";
+              input.checked = true;
+              input.disabled = true;
+              input.setAttribute("data-qt-rule", id);
+              const strong = document.createElement("strong");
+              strong.textContent = " " + name + " ";
+              label.append(input, strong, document.createTextNode(text));
+              li.appendChild(label);
+              rules.appendChild(li);
+            });
+            body.appendChild(rules);
+          },
+          apply: (name) => quizToggleRealSubject(subjectOptions, name)
+        },
+        {
+          key: "homeroom",
+          title: "담임 과목",
+          question: "담임 선생님이 직접 가르치는 과목을 고르세요.",
+          hint: "강조된 '담임 과목' 버튼에서 나중에도 고를 수 있어요. 전담으로 고른 과목은 여기 나오지 않아요.",
+          target: () => homeroomToggle.closest(".control-group"),
+          menu: () => homeroomMenu,
+          render: (body) => renderQuizSubjectChecks(body, homeroomOptions, quizTutorialSteps[2]),
+          apply: (name) => quizToggleRealSubject(homeroomOptions, name)
+        },
+        // 2번(최대 교시)·5번(마지막 교시) 질문은 위 배열의 알맞은 자리에 {key, title, question, hint, target, render, apply} 항목 하나만 끼우면 된다.
+        {
+          key: "holiday",
+          title: "요일별 휴일",
+          question: "쉬는 요일이 있나요? 휴일로 쉬는 요일을 켜세요.",
+          hint: "자동 생성 창의 '요일별 휴일 여부' 표에서 나중에도 켜고 끌 수 있어요.",
+          needsAutoModal: true,
+          target: () => holidayBody.closest(".last-period-config"),
+          render: (body) => {
+            const box = document.createElement("div");
+            box.className = "qt-checks";
+            const inputs = days.map((day) => {
+              const label = document.createElement("label");
+              label.className = "qt-check";
+              const input = document.createElement("input");
+              input.type = "checkbox";
+              input.setAttribute("data-qt-day", day);
+              input.addEventListener("change", () => { quizTutorialSteps[3].apply(day); sync(); });
+              label.append(input, document.createTextNode(day + " 휴일"));
+              box.appendChild(label);
+              return input;
+            });
+            const sync = () => inputs.forEach((input) => { input.checked = holidayDays.has(input.getAttribute("data-qt-day")); });
+            body.appendChild(box);
+            sync();
+            quizTutorialSteps[3].sync = sync;
+          },
+          apply: (day) => {
+            const cell = holidayBody.querySelectorAll("td")[days.indexOf(day)];
+            if (cell) cell.click();
+          }
+        }
+      ];
+      let quizTutorialIndex = -1;
+      let quizOpenedAutoModal = false;
+      const quizTutorialBox = document.getElementById("quizTutorial");
+      const quizTutorialStartBtn = document.getElementById("quizTutorialStartBtn");
+
+      function quizToggleRealSubject(container, name) {
+        const real = Array.from(container.querySelectorAll("input[type=checkbox]")).find((input) => input.value === name);
+        if (real) real.click();
+      }
+
+      function renderQuizSubjectChecks(body, container, step) {
+        const box = document.createElement("div");
+        box.className = "qt-checks";
+        const inputs = Array.from(container.querySelectorAll("input[type=checkbox]")).map((real) => {
+          const label = document.createElement("label");
+          label.className = "qt-check";
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.value = real.value;
+          input.setAttribute("data-qt-subject", real.value);
+          input.addEventListener("change", () => { step.apply(real.value); closeQuizMenus(); sync(); });
+          label.append(input, document.createTextNode(real.value));
+          box.appendChild(label);
+          return input;
+        });
+        const sync = () => inputs.forEach((input) => {
+          const real = Array.from(container.querySelectorAll("input[type=checkbox]")).find((item) => item.value === input.value);
+          input.checked = !!(real && real.checked);
+        });
+        body.appendChild(box);
+        sync();
+        step.sync = sync;
+      }
+
+      function closeQuizMenus() {
+        let closed = false;
+        [[specialistMenu, specialistToggle], [homeroomMenu, homeroomToggle]].forEach(([menu, toggle]) => {
+          if (menu.classList.contains("open")) {
+            menu.classList.remove("open");
+            toggle.setAttribute("aria-expanded", "false");
+            closed = true;
+          }
+        });
+        return closed;
+      }
+
+      function clearQuizHighlight() {
+        document.querySelectorAll(".qt-highlight").forEach((element) => element.classList.remove("qt-highlight"));
+      }
+
+      function closeQuizOwnedModal() {
+        if (quizOpenedAutoModal) {
+          closeAutoGenerateModal();
+          quizOpenedAutoModal = false;
+        }
+      }
+
+      function quizOverlapArea(a, b, pad) {
+        const w = Math.min(a.right, b.right + pad) - Math.max(a.left, b.left - pad);
+        const h = Math.min(a.bottom, b.bottom + pad) - Math.max(a.top, b.top - pad);
+        return w > 0 && h > 0 ? w * h : 0;
+      }
+
+      function quizControlRects() {
+        const modalOpen = autoGenerateModal.classList.contains("open");
+        const root = modalOpen ? autoGenerateModal.querySelector(".auto-dialog") : document;
+        const clip = modalOpen ? root.getBoundingClientRect() : { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+        const rects = [];
+        root.querySelectorAll("select, button, input, textarea, a[href]").forEach((element) => {
+          if (quizTutorialBox.contains(element) || element.closest(".specialist-menu")) return;
+          const r = element.getBoundingClientRect();
+          if (r.width <= 0 || r.height <= 0) return;
+          const c = { left: Math.max(r.left, clip.left), top: Math.max(r.top, clip.top), right: Math.min(r.right, clip.right), bottom: Math.min(r.bottom, clip.bottom) };
+          if (c.right > c.left && c.bottom > c.top) rects.push(c);
+        });
+        return rects;
+      }
+
+      function setQuizSpotlight(hole) {
+        let dim = document.getElementById("qtDim");
+        if (!hole) {
+          if (dim) dim.hidden = true;
+          return;
+        }
+        if (!dim) {
+          dim = document.createElement("div");
+          dim.id = "qtDim";
+          dim.setAttribute("data-testid", "quiz-dim");
+          for (let i = 0; i < 4; i += 1) dim.appendChild(document.createElement("div"));
+          document.body.appendChild(dim);
+        }
+        dim.hidden = false;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const pad = 4;
+        const t = Math.max(0, hole.top - pad);
+        const b = Math.min(vh, hole.bottom + pad);
+        const l = Math.max(0, hole.left - pad);
+        const r = Math.min(vw, hole.right + pad);
+        const parts = [[0, 0, vw, t], [0, b, vw, vh - b], [0, t, l, b - t], [r, t, vw - r, b - t]];
+        Array.from(dim.children).forEach((part, i) => {
+          part.style.cssText = "left:" + parts[i][0] + "px;top:" + parts[i][1] + "px;width:" + Math.max(0, parts[i][2]) + "px;height:" + Math.max(0, parts[i][3]) + "px;";
+        });
+      }
+
+      function positionQuizBox(target) {
+        if (!target || quizTutorialBox.hidden) return;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const gap = 8;
+        const stepEl = document.getElementById("qtStep");
+        stepEl.style.maxHeight = "";
+        quizTutorialBox.style.maxHeight = "";
+        const width = quizTutorialBox.offsetWidth;
+        const height = quizTutorialBox.offsetHeight;
+        // 강조 대상과 (열려 있으면) 그 메뉴를 묶은 '구멍'. 상자는 여기와 겹치지 않는다.
+        const hole = target.getBoundingClientRect();
+        const box = { left: hole.left, top: hole.top, right: hole.right, bottom: hole.bottom };
+        const step = quizTutorialSteps[quizTutorialIndex];
+        const reserved = step && step.menu ? step.menu() : null;
+        const reservedWasOpen = reserved && reserved.classList.contains("open");
+        if (reserved && !reservedWasOpen) reserved.classList.add("open");
+        const menus = Array.from(document.querySelectorAll(".specialist-menu.open"));
+        menus.forEach((menu) => {
+          const m = menu.getBoundingClientRect();
+          box.left = Math.min(box.left, m.left); box.top = Math.min(box.top, m.top);
+          box.right = Math.max(box.right, m.right); box.bottom = Math.max(box.bottom, m.bottom);
+        });
+        if (reserved && !reservedWasOpen) reserved.classList.remove("open");
+        const controls = quizControlRects();
+        const cx = (box.left + box.right) / 2;
+        const cy = (box.top + box.bottom) / 2;
+        let best = null;
+        let bestCost = Infinity;
+        let spotlight = false;
+        const scan = (allowControls) => {
+          for (let top = gap; top <= vh - height - gap; top += 8) {
+            for (let left = gap; left <= vw - width - gap; left += 8) {
+              const r = { left, top, right: left + width, bottom: top + height };
+              if (quizOverlapArea(r, box, gap) > 0) continue;
+              let area = 0;
+              for (const c of controls) area += quizOverlapArea(r, c, 4);
+              if (area > 0 && !allowControls) continue;
+              const dist = Math.hypot((left + width / 2) - cx, (top + height / 2) - cy);
+              const cost = area * 1000 + dist;
+              if (cost < bestCost) { bestCost = cost; best = { left, top }; }
+            }
+          }
+        };
+        scan(false);
+        if (!best) {
+          // 빈 자리가 없으면 강조 대상만 밝게, 나머지는 어둡게(클릭 막힘) 하고 덜 가리는 곳에 둔다.
+          spotlight = true;
+          scan(true);
+        }
+        if (!best) {
+          const below = vh - box.bottom - gap * 2;
+          const above = box.top - gap * 2;
+          const useBelow = below >= above;
+          const room = Math.max(120, useBelow ? below : above);
+          quizTutorialBox.style.maxHeight = room + "px";
+          const fixedPart = quizTutorialBox.offsetHeight - stepEl.offsetHeight;
+          stepEl.style.maxHeight = Math.max(60, room - fixedPart) + "px";
+          best = { left: Math.max(gap, Math.min(hole.left, vw - width - gap)), top: useBelow ? box.bottom + gap : Math.max(gap, box.top - gap - quizTutorialBox.offsetHeight) };
+        }
+        quizTutorialBox.style.left = best.left + "px";
+        quizTutorialBox.style.top = best.top + "px";
+        quizTutorialBox.setAttribute("data-qt-place", spotlight ? "spotlight" : "free");
+        setQuizSpotlight(spotlight ? box : null);
+      }
+
+      function repositionQuizBox() {
+        if (quizTutorialIndex < 0) return;
+        const step = quizTutorialSteps[quizTutorialIndex];
+        positionQuizBox(step.target());
+      }
+
+      function repositionQuizBoxSoon() {
+        window.setTimeout(() => {
+          if (quizTutorialIndex < 0) return;
+          const step = quizTutorialSteps[quizTutorialIndex];
+          if (step && step.sync) step.sync();
+          repositionQuizBox();
+        }, 30);
+      }
+
+      function showQuizStep(index) {
+        const step = quizTutorialSteps[index];
+        if (!step) return;
+        quizTutorialIndex = index;
+        if (step.needsAutoModal) {
+          if (!autoGenerateModal.classList.contains("open")) {
+            openAutoGenerateModal();
+            quizOpenedAutoModal = true;
+          }
+        } else {
+          closeQuizOwnedModal();
+        }
+        clearQuizHighlight();
+        const stepEl = document.getElementById("qtStep");
+        stepEl.innerHTML = "";
+        stepEl.setAttribute("data-qt-step", step.key);
+        const heading = document.createElement("h3");
+        heading.textContent = step.question;
+        stepEl.appendChild(heading);
+        step.render(stepEl);
+        const hint = document.createElement("p");
+        hint.className = "qt-hint";
+        hint.textContent = step.hint;
+        stepEl.appendChild(hint);
+        document.getElementById("qtProgress").textContent = (index + 1) + "/" + quizTutorialSteps.length;
+        document.getElementById("qtPrev").disabled = index === 0;
+        document.getElementById("qtNext").textContent = index === quizTutorialSteps.length - 1 ? "마침" : "다음";
+        const target = step.target();
+        if (target) {
+          target.classList.add("qt-highlight");
+          target.scrollIntoView({ block: step.needsAutoModal ? "center" : "start", inline: "nearest" });
+        }
+        quizTutorialBox.hidden = false;
+        positionQuizBox(target);
+        window.setTimeout(repositionQuizBox, 120);
+      }
+
+      function handleQuizEscape(event) {
+        if (event.key !== "Escape") return;
+        if (closeQuizMenus()) {
+          event.stopPropagation();
+          return;
+        }
+        endQuizTutorial();
+      }
+
+      function endQuizTutorial() {
+        document.removeEventListener("keydown", handleQuizEscape, true);
+        window.removeEventListener("resize", repositionQuizBox);
+        window.removeEventListener("scroll", repositionQuizBox, true);
+        document.removeEventListener("click", repositionQuizBoxSoon);
+        document.removeEventListener("change", repositionQuizBoxSoon);
+        quizTutorialIndex = -1;
+        quizTutorialBox.hidden = true;
+        setQuizSpotlight(null);
+        clearQuizHighlight();
+        closeQuizOwnedModal();
+      }
+
+      function startQuizTutorial() {
+        endTutorial();
+        endQuizTutorial();
+        document.addEventListener("keydown", handleQuizEscape, true);
+        window.addEventListener("resize", repositionQuizBox);
+        window.addEventListener("scroll", repositionQuizBox, true);
+        document.addEventListener("click", repositionQuizBoxSoon);
+        document.addEventListener("change", repositionQuizBoxSoon);
+        showQuizStep(0);
+        quizTutorialBox.focus();
+      }
+
+      function setupQuizTutorial() {
+        if (!quizTutorialStartBtn) return;
+        quizTutorialStartBtn.addEventListener("click", startQuizTutorial);
+        tutorialStartBtn.addEventListener("click", endQuizTutorial);
+        document.getElementById("qtPrev").addEventListener("click", () => showQuizStep(quizTutorialIndex - 1));
+        document.getElementById("qtNext").addEventListener("click", () => {
+          if (quizTutorialIndex >= quizTutorialSteps.length - 1) endQuizTutorial();
+          else showQuizStep(quizTutorialIndex + 1);
+        });
+        document.getElementById("qtClose").addEventListener("click", endQuizTutorial);
+      }
+      setupQuizTutorial();
+
       function setupSpecialistCellMenuClose() {
         document.addEventListener("click", (event) => {
           if (event.target.closest(".class-select-menu")) return;
