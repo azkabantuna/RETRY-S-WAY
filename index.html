@@ -1818,12 +1818,14 @@
       @keyframes qtHold { from { opacity: 0; transform: scale(0.88); } to { opacity: 0; transform: scale(0.88); } }
       @keyframes qtPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
       @keyframes qtGlow { 0%, 100% { box-shadow: 0 0 0 4px var(--theme-glow-soft); } 50% { box-shadow: 0 0 0 8px var(--theme-glow-soft); } }
+      .qt-box.qt-noarrow .qt-arrow { display: none !important; }
       .qt-arrow { display: none; position: absolute; background: var(--theme-main); pointer-events: none; }
       .qt-side-bottom .qt-arrow { display: block; width: 22px; height: 12px; top: -18px; clip-path: polygon(50% 0, 0 100%, 100% 100%); }
       .qt-side-top .qt-arrow { display: block; width: 22px; height: 12px; bottom: -14px; clip-path: polygon(0 0, 100% 0, 50% 100%); }
       .qt-side-right .qt-arrow { display: block; width: 12px; height: 22px; left: -14px; clip-path: polygon(100% 0, 100% 100%, 0 50%); }
       .qt-side-left .qt-arrow { display: block; width: 12px; height: 22px; right: -14px; clip-path: polygon(0 0, 0 100%, 100% 50%); }
-      #qtDim { position: fixed; inset: 0; z-index: 390; pointer-events: none; }
+      #qtDim { position: fixed; inset: 0; z-index: 390; pointer-events: none; opacity: 0; transition: opacity 0.3s ease; }
+      #qtDim.on { opacity: 1; }
       #qtDim[hidden] { display: none; }
       #qtDim div { position: absolute; background: var(--theme-dim); pointer-events: auto; opacity: 0; transition: opacity 0.3s ease; }
       #qtDim.on div { opacity: 1; }
@@ -1833,7 +1835,7 @@
       #qtSpot[hidden] { display: none; }
       #qtSpot.qt-geo { transition: left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease; }
       @media (prefers-reduced-motion: reduce) {
-        #qtDim div, #qtDim.qt-geo div, #qtSpot.qt-geo { transition-duration: 0.01s !important; }
+        #qtDim, #qtDim div, #qtDim.qt-geo div, #qtSpot.qt-geo { transition-duration: 0.01s !important; }
         #qtSpot, .qt-highlight { animation: none !important; }
         .qt-box[data-qt-anim], .qt-ghost { animation-duration: 0.01s !important; }
       }
@@ -1848,15 +1850,15 @@
         border-radius: 10px;
         background: var(--theme-card);
         padding: 6px 10px;
-        min-width: 44px;
-        min-height: 44px;
+        min-width: 48px;
+        min-height: 48px;
         font-weight: 700;
         cursor: pointer;
         touch-action: manipulation;
       }
       .qt-choices button[aria-pressed="true"] { background: var(--theme-main-strong); border-color: var(--theme-main); color: var(--theme-on-main); }
       .qt-checks { display: flex; flex-wrap: wrap; gap: 6px; }
-      .qt-check { display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; min-height: 44px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; font-size: 0.88rem; cursor: pointer; }
+      .qt-check { display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; min-height: 48px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; font-size: 0.88rem; cursor: pointer; }
       .qt-check input { width: 20px; height: 20px; margin: 0; }
       .qt-rules { margin: 8px 0 0; padding: 0; list-style: none; font-size: 0.8rem; line-height: 1.35; }
       .qt-rules li { margin-bottom: 4px; }
@@ -4829,13 +4831,34 @@
       const quizReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
       // 덮개(#qtDim 4조각 = 구멍 둘레)와 대상 둘레 테두리(#qtSpot). hole = 대상(+열린 메뉴) 사각형, 구멍은 여기서 ±8px.
-      function setQuizSpotlight(hole, animate) {
+      function quizHolePieces(rects, vw, vh) {
+        const ys = new Set([0, vh]);
+        rects.forEach((r) => { ys.add(Math.max(0, Math.min(vh, r.top))); ys.add(Math.max(0, Math.min(vh, r.bottom))); });
+        const sorted = Array.from(ys).sort((x, y) => x - y);
+        const out = [];
+        for (let i = 0; i + 1 < sorted.length; i += 1) {
+          const y0 = sorted[i];
+          const y1 = sorted[i + 1];
+          if (y1 <= y0) continue;
+          const spans = rects.filter((r) => r.top < y1 && r.bottom > y0).map((r) => [Math.max(0, r.left), Math.min(vw, r.right)]).sort((p, q) => p[0] - q[0]);
+          let x = 0;
+          spans.forEach((sp) => {
+            if (sp[0] > x) out.push([x, y0, sp[0] - x, y1 - y0]);
+            x = Math.max(x, sp[1]);
+          });
+          if (x < vw) out.push([x, y0, vw - x, y1 - y0]);
+        }
+        return out;
+      }
+
+      // 덮개(#qtDim 조각 = 구멍 둘레)와 대상 둘레 테두리(#qtSpot). rects = 대상과 열린 메뉴 사각형들(각각 ±8px 구멍), ring = 대상 사각형.
+      function setQuizSpotlight(rects, ring, animate) {
         let dim = document.getElementById("qtDim");
-        let ring = document.getElementById("qtSpot");
+        let spot = document.getElementById("qtSpot");
         window.clearTimeout(quizDimTimer);
-        if (!hole) {
+        if (!rects) {
           if (!dim || dim.hidden) return;
-          ring.hidden = true;
+          spot.hidden = true;
           dim.classList.remove("on", "qt-geo");
           dim.classList.add("leaving");
           quizDimTimer = window.setTimeout(() => { dim.hidden = true; dim.classList.remove("leaving"); }, 320);
@@ -4846,51 +4869,60 @@
           dim.id = "qtDim";
           dim.setAttribute("data-testid", "quiz-dim");
           dim.hidden = true;
-          for (let i = 0; i < 4; i += 1) dim.appendChild(document.createElement("div"));
           document.body.appendChild(dim);
-          ring = document.createElement("div");
-          ring.id = "qtSpot";
-          ring.setAttribute("data-testid", "quiz-spot");
-          ring.hidden = true;
-          document.body.appendChild(ring);
+          spot = document.createElement("div");
+          spot.id = "qtSpot";
+          spot.setAttribute("data-testid", "quiz-spot");
+          spot.hidden = true;
+          document.body.appendChild(spot);
         }
         const wasHidden = dim.hidden;
         dim.hidden = false;
-        ring.hidden = false;
+        spot.hidden = false;
         dim.classList.remove("leaving");
         if (animate !== undefined) {
           window.clearTimeout(quizGeoTimer);
           const geo = animate && !wasHidden;
           dim.classList.toggle("qt-geo", geo);
-          ring.classList.toggle("qt-geo", geo);
-          if (geo) quizGeoTimer = window.setTimeout(() => { dim.classList.remove("qt-geo"); ring.classList.remove("qt-geo"); }, 330);
+          spot.classList.toggle("qt-geo", geo);
+          if (geo) quizGeoTimer = window.setTimeout(() => { dim.classList.remove("qt-geo"); spot.classList.remove("qt-geo"); }, 330);
         }
         const vw = window.innerWidth;
         const vh = window.innerHeight;
         const pad = 8;
-        const t = Math.max(0, hole.top - pad);
-        const b = Math.min(vh, hole.bottom + pad);
-        const l = Math.max(0, hole.left - pad);
-        const r = Math.min(vw, hole.right + pad);
-        const parts = [[0, 0, vw, t], [0, b, vw, vh - b], [0, t, l, b - t], [r, t, vw - r, b - t]];
+        const holes = rects.map((r) => ({ left: r.left - pad, top: r.top - pad, right: r.right + pad, bottom: r.bottom + pad }));
+        const parts = quizHolePieces(holes, vw, vh);
+        while (dim.children.length < parts.length) dim.appendChild(document.createElement("div"));
         Array.from(dim.children).forEach((part, i) => {
-          part.style.cssText = "left:" + parts[i][0] + "px;top:" + parts[i][1] + "px;width:" + Math.max(0, parts[i][2]) + "px;height:" + Math.max(0, parts[i][3]) + "px;";
+          const p = parts[i] || [0, 0, 0, 0];
+          part.style.cssText = "left:" + p[0] + "px;top:" + p[1] + "px;width:" + Math.max(0, p[2]) + "px;height:" + Math.max(0, p[3]) + "px;";
         });
-        ring.style.cssText = "left:" + l + "px;top:" + t + "px;width:" + Math.max(0, r - l) + "px;height:" + Math.max(0, b - t) + "px;";
-        if (wasHidden) void dim.offsetWidth;
-        dim.classList.add("on");
+        const t = Math.max(0, ring.top - pad);
+        const bt = Math.min(vh, ring.bottom + pad);
+        const l = Math.max(0, ring.left - pad);
+        const r = Math.min(vw, ring.right + pad);
+        spot.style.cssText = "left:" + l + "px;top:" + t + "px;width:" + Math.max(0, r - l) + "px;height:" + Math.max(0, bt - t) + "px;";
+        if (wasHidden) {
+          // 첫 프레임은 투명(0)으로 그려 두고, 다음 프레임에 1 로 바꿔 0.3초 동안 서서히 나타나게 한다.
+          void dim.offsetWidth;
+          window.requestAnimationFrame(() => { if (!dim.hidden && !dim.classList.contains("leaving")) dim.classList.add("on"); });
+        } else {
+          dim.classList.add("on");
+        }
       }
 
       // 대상 사각형(target)과, 대상+지금 열려 있는 메뉴를 묶은 사각형(box). 메뉴가 열리면 상자가 비켜 선다.
       function quizMeasureBox(target) {
         const hole = target.getBoundingClientRect();
         const box = { left: hole.left, top: hole.top, right: hole.right, bottom: hole.bottom };
+        const rects = [hole];
         document.querySelectorAll(".specialist-menu.open").forEach((menu) => {
           const m = menu.getBoundingClientRect();
+          rects.push(m);
           box.left = Math.min(box.left, m.left); box.top = Math.min(box.top, m.top);
           box.right = Math.max(box.right, m.right); box.bottom = Math.max(box.bottom, m.bottom);
         });
-        return { target: hole, box };
+        return { target: hole, box, rects };
       }
 
       // 상자를 구멍 바로 옆(위·아래·좌·우 중 대상과 가장 가깝고 화면 안에 들어가는 쪽)에 붙이고 꼬리(#qtArrow)가 대상을 가리키게 한다.
@@ -4940,12 +4972,17 @@
         arrow.style.top = "";
         if (best.side === "bottom" || best.side === "top") arrow.style.left = (clamp(tcx - best.left, 22, width - 22) - 2 - 11) + "px";
         else arrow.style.top = (clamp(tcy - best.top, 22, quizTutorialBox.offsetHeight - 22) - 6 - 11) + "px";
-        quizTutorialBox.style.left = best.left + "px";
-        quizTutorialBox.style.top = best.top + "px";
-        quizTutorialBox.className = "qt-box qt-side-" + best.side;
+        // 스크롤로 대상이 멀어져도 카드는 화면 안에 남긴다(그때는 꼬리를 숨김).
+        const finalH = quizTutorialBox.offsetHeight;
+        const cLeft = clamp(best.left, gap, vw - width - gap);
+        const cTop = clamp(best.top, gap, vh - finalH - gap);
+        const clamped = Math.abs(cLeft - best.left) > 1 || Math.abs(cTop - best.top) > 1;
+        quizTutorialBox.style.left = cLeft + "px";
+        quizTutorialBox.style.top = cTop + "px";
+        quizTutorialBox.className = "qt-box qt-side-" + best.side + (clamped && (best.side === "top" || best.side === "bottom" ? Math.abs(cTop - best.top) > 1 : Math.abs(cLeft - best.left) > 1) ? " qt-noarrow" : "");
         quizTutorialBox.setAttribute("data-qt-side", best.side);
         quizTutorialBox.setAttribute("data-qt-place", "spotlight");
-        setQuizSpotlight(b, animate);
+        setQuizSpotlight(m.rects, tr, animate);
       }
 
       function repositionQuizBox() {
@@ -5033,7 +5070,7 @@
         quizTutorialBox.hidden = false;
         quizPlayCardAnim(ghost);
         // 무거운 배치 계산은 다음 작업으로 나눠 한 번에 50ms 를 넘지 않게 한다.
-        window.setTimeout(() => {
+        window.requestAnimationFrame(() => window.setTimeout(() => {
           if (quizTutorialIndex !== index) return;
           const target = step.target();
           let scrolling = false;
@@ -5042,7 +5079,7 @@
             scrolling = quizScrollToTarget(target, step);
           }
           positionQuizBox(target, !scrolling);
-        }, 0);
+        }, 0));
         window.setTimeout(repositionQuizBox, 120);
       }
 
