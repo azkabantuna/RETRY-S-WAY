@@ -885,6 +885,7 @@
         width: min(96vw, 760px);
         max-height: 80vh;
         overflow: auto;
+        box-sizing: border-box;
         background: var(--card);
         border: 1px solid var(--line);
         border-radius: 10px;
@@ -897,26 +898,59 @@
         font-size: 1rem;
       }
 
-      .auto-row {
+      .auto-section {
+        margin: 0 0 16px;
+      }
+
+      .auto-section-title {
+        margin: 14px 0 12px;
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: var(--theme-text);
+      }
+
+      .auto-grid {
         display: grid;
-        grid-template-columns: 1fr auto auto auto;
-        align-items: center;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
         gap: 10px;
-        margin-bottom: 8px;
+      }
+
+      .auto-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--card);
+        box-sizing: border-box;
       }
 
       .auto-row label {
-        font-weight: 700;
+        display: block;
+        padding: 8px 10px;
+        border-radius: 14px;
+        text-align: center;
+        font-weight: 800;
+        overflow-wrap: anywhere;
       }
 
       .auto-row input,
       .auto-row select {
-        width: auto;
-        min-width: 78px;
-        max-width: 100%;
+        width: 100%;
+        min-width: 0;
+        height: 34px;
+        box-sizing: border-box;
         border: 1px solid var(--line);
-        border-radius: 7px;
+        border-radius: 8px;
         padding: 5px 7px;
+        font-size: 0.8rem;
+      }
+
+      .auto-field-empty {
+        height: 53px;
+        visibility: hidden;
       }
 
       .custom-hour-input {
@@ -950,55 +984,24 @@
         padding: 8px;
       }
 
+      .auto-field {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+      }
+
       .auto-field-title {
+        display: block;
+        height: 16px;
+        line-height: 16px;
         font-size: 0.72rem;
         color: var(--muted);
         font-weight: 700;
       }
 
-      .auto-specialist-label {
-        color: var(--purple);
-      }
-
-      .auto-subject-divider {
-        border-top: 1px dashed var(--purple-line);
-        margin: 8px 0 10px;
-      }
-
-      .auto-specialist-label {
-        color: var(--purple);
-      }
-
-      .auto-subject-divider {
-        border-top: 1px dashed var(--purple-line);
-        margin: 8px 0 10px;
-      }
-
-      .auto-specialist-label {
-        color: var(--purple);
-      }
-
-      .auto-subject-divider {
-        border-top: 1px dashed var(--purple-line);
-        margin: 8px 0 10px;
-      }
-
-      .auto-specialist-label {
-        color: var(--purple);
-      }
-
-      .auto-subject-divider {
-        border-top: 1px dashed var(--purple-line);
-        margin: 8px 0 10px;
-      }
-
-      .auto-specialist-label {
-        color: var(--purple);
-      }
-
-      .auto-subject-divider {
-        border-top: 1px dashed var(--purple-line);
-        margin: 8px 0 10px;
+      .auto-row .teacher-picker {
+        width: 100%;
       }
 
       .pe-quick-btn.gym {
@@ -1006,10 +1009,14 @@
       }
 
       .teacher-toggle {
-        width: auto;
-        min-width: 84px;
+        width: 100%;
+        height: 34px;
+        box-sizing: border-box;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
         border: 1px solid var(--line);
-        border-radius: 7px;
+        border-radius: 8px;
         background: var(--card);
         padding: 5px 7px;
         text-align: left;
@@ -2139,22 +2146,6 @@
       <div class="auto-dialog" role="dialog" aria-modal="true" aria-label="자동 시간표 생성 설정">
         <h2>자동 시간표 생성 설정</h2>
         <div id="autoGenerateRows"></div>
-        <section class="last-period-config" aria-label="요일별 마지막 교시 사용 여부" hidden>
-          <h3>요일별 마지막 교시 사용 여부 (클릭 시 X 표시)</h3>
-          <table class="last-period-table">
-            <thead>
-              <tr>
-                <th>교시</th>
-                <th>월</th>
-                <th>화</th>
-                <th>수</th>
-                <th>목</th>
-                <th>금</th>
-              </tr>
-            </thead>
-            <tbody id="lastPeriodBody"></tbody>
-          </table>
-        </section>
         <section class="last-period-config" aria-label="요일별 휴일 여부">
           <h3>요일별 휴일 여부 (클릭 시 휴일 표시)</h3>
           <table class="last-period-table">
@@ -2379,7 +2370,6 @@
       const autoGenerateRows = document.getElementById("autoGenerateRows");
       const autoGenerateRunBtn = document.getElementById("autoGenerateRunBtn");
       const autoGenerateCancelBtn = document.getElementById("autoGenerateCancelBtn");
-      const lastPeriodBody = document.getElementById("lastPeriodBody");
       const holidayBody = document.getElementById("holidayBody");
       const conflictConfirmModal = document.getElementById("conflictConfirmModal");
       const conflictProceedBtn = document.getElementById("conflictProceedBtn");
@@ -2432,7 +2422,7 @@
           description: "자동 생성 버튼을 눌러 시수, 교사, 연차시를 설정한 뒤 시간표를 만드세요."
         },
         {
-          selector: "#autoGenerateModal .last-period-config:not([hidden])",
+          selector: "#autoGenerateModal .last-period-config",
           title: "8. 휴일/마지막 교시 설정",
           description: "요일별 마지막 교시와 휴일을 설정하면 자동 배치에서 제외됩니다."
         }
@@ -2826,40 +2816,6 @@
         }
       }
 
-      function renderLastPeriodToggleRow() {
-        lastPeriodBody.innerHTML = "";
-        const row = document.createElement("tr");
-
-        const periodCell = document.createElement("th");
-        periodCell.textContent = `${maxPeriodCount}교시`;
-        row.appendChild(periodCell);
-
-        days.forEach((day) => {
-          const cell = document.createElement("td");
-          cell.className = "last-period-toggle";
-          const disabled = disabledLastPeriodDays.has(day);
-          if (disabled) {
-            cell.classList.add("disabled");
-            cell.textContent = "X";
-          } else {
-            cell.textContent = "사용";
-          }
-          cell.addEventListener("click", () => {
-            if (disabledLastPeriodDays.has(day)) {
-              disabledLastPeriodDays.delete(day);
-            } else {
-              disabledLastPeriodDays.add(day);
-              clearDisabledLastPeriodEntriesForDay(day);
-            }
-            renderLastPeriodToggleRow();
-            renderTimetables();
-          });
-          row.appendChild(cell);
-        });
-
-        lastPeriodBody.appendChild(row);
-      }
-
       function renderHolidayToggleRow() {
         holidayBody.innerHTML = "";
         const row = document.createElement("tr");
@@ -2975,9 +2931,9 @@
 
           const label = document.createElement("label");
           label.textContent = subject;
-          if (subjectGroup === "specialist") {
-            label.classList.add("auto-specialist-label");
-          }
+          label.dataset.testid = "auto-chip";
+          label.style.backgroundColor = getSubjectBg(subject);
+          label.style.color = getSubjectFg(subject);
 
           const hourField = document.createElement("div");
           hourField.className = "auto-field";
@@ -3140,8 +3096,8 @@
           const seriesSelect = document.createElement("select");
           seriesSelect.dataset.subjectSeries = subject;
           [
-            { value: "possible", text: "하루에 여러 시수 배치 허용" },
-            { value: "impossible", text: "하루에 1시수만 배치" },
+            { value: "possible", text: "여러 시수 허용" },
+            { value: "impossible", text: "하루 1시수만" },
             { value: "double", text: "2연차시" }
           ].forEach((series) => {
             const option = document.createElement("option");
@@ -3158,23 +3114,35 @@
           if (teacherField) {
             row.append(label, hourField, teacherField, seriesField);
           } else {
-            row.append(label, hourField, seriesField);
+            const spacer = document.createElement("div");
+            spacer.className = "auto-field-empty";
+            spacer.setAttribute("aria-hidden", "true");
+            row.append(label, hourField, seriesField, spacer);
           }
-          autoGenerateRows.appendChild(row);
+          return row;
         };
 
-        specialistList.forEach((subject) => renderRow(subject, "specialist"));
-        if (specialistList.length && homeroomList.length) {
-          const divider = document.createElement("div");
-          divider.className = "auto-subject-divider";
-          autoGenerateRows.appendChild(divider);
-        }
-        homeroomList.forEach((subject) => renderRow(subject, "homeroom"));
+        const renderGroup = (list, subjectGroup, title) => {
+          if (!list.length) return;
+          const section = document.createElement("section");
+          section.className = "auto-section";
+          section.dataset.testid = `auto-section-${subjectGroup === "specialist" ? "전담" : "담임"}`;
+          const heading = document.createElement("h3");
+          heading.className = "auto-section-title";
+          heading.textContent = title;
+          const grid = document.createElement("div");
+          grid.className = "auto-grid";
+          list.forEach((subject) => grid.appendChild(renderRow(subject, subjectGroup)));
+          section.append(heading, grid);
+          autoGenerateRows.appendChild(section);
+        };
+
+        renderGroup(specialistList, "specialist", "전담 과목");
+        renderGroup(homeroomList, "homeroom", "담임 과목");
       }
 
       function openAutoGenerateModal() {
         renderAutoGenerateRows();
-        renderLastPeriodToggleRow();
         renderHolidayToggleRow();
         autoGenerateModal.classList.add("open");
         autoGenerateModal.setAttribute("aria-hidden", "false");
