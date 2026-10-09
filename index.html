@@ -1830,6 +1830,7 @@
       #qtDim div { position: absolute; background: var(--theme-dim); pointer-events: auto; opacity: 0; transition: opacity 0.3s ease; }
       #qtDim.on div { opacity: 1; }
       #qtDim.leaving div { pointer-events: none; }
+      #qtDim.qt-geo div.qt-fill { transition: opacity 0.3s ease; }
       #qtDim.qt-geo div { transition: opacity 0.3s ease, left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease; }
       #qtSpot { position: fixed; z-index: 395; box-sizing: border-box; border: 3px solid var(--theme-main); border-radius: 10px; pointer-events: none; animation: qtPulse 1.6s ease-in-out infinite; }
       #qtSpot[hidden] { display: none; }
@@ -4721,7 +4722,10 @@
               li.appendChild(label);
               rules.appendChild(li);
             });
-            body.appendChild(rules);
+            // 규칙 목록은 다음 작업에서 붙여 첫 배치 비용을 나눈다(안내 문장보다 앞에 둠).
+            window.requestAnimationFrame(() => window.setTimeout(() => {
+              if (body.isConnected && quizTutorialIndex === 1) body.insertBefore(rules, body.querySelector(".qt-hint"));
+            }, 0));
           },
           apply: (name) => quizToggleRealSubject(subjectOptions, name)
         },
@@ -4891,10 +4895,23 @@
         const vh = window.innerHeight;
         const pad = 8;
         const holes = rects.map((r) => ({ left: r.left - pad, top: r.top - pad, right: r.right + pad, bottom: r.bottom + pad }));
-        const parts = quizHolePieces(holes, vw, vh);
+        // 바깥 4조각은 구멍들의 외접 사각형 둘레(항상 같은 모양이라 단계 이동 때 구멍과 함께 미끄러짐),
+        // 그 안에서 구멍이 아닌 자리(대상과 열린 메뉴 사이 틈)는 채움 조각이 덮는다.
+        const bb = { left: Math.max(0, Math.min(...holes.map((h) => h.left))), top: Math.max(0, Math.min(...holes.map((h) => h.top))), right: Math.min(vw, Math.max(...holes.map((h) => h.right))), bottom: Math.min(vh, Math.max(...holes.map((h) => h.bottom))) };
+        const parts = [[0, 0, vw, bb.top], [0, bb.bottom, vw, vh - bb.bottom], [0, bb.top, bb.left, bb.bottom - bb.top], [bb.right, bb.top, vw - bb.right, bb.bottom - bb.top]];
+        if (holes.length > 1) {
+          quizHolePieces(holes, vw, vh).forEach((p) => {
+            const l2 = Math.max(p[0], bb.left);
+            const t2 = Math.max(p[1], bb.top);
+            const r2 = Math.min(p[0] + p[2], bb.right);
+            const b2 = Math.min(p[1] + p[3], bb.bottom);
+            if (r2 > l2 && b2 > t2) parts.push([l2, t2, r2 - l2, b2 - t2]);
+          });
+        }
         while (dim.children.length < parts.length) dim.appendChild(document.createElement("div"));
         Array.from(dim.children).forEach((part, i) => {
           const p = parts[i] || [0, 0, 0, 0];
+          part.classList.toggle("qt-fill", i >= 4);
           part.style.cssText = "left:" + p[0] + "px;top:" + p[1] + "px;width:" + Math.max(0, p[2]) + "px;height:" + Math.max(0, p[3]) + "px;";
         });
         const t = Math.max(0, ring.top - pad);
@@ -5030,9 +5047,13 @@
           quizTutorialBox.setAttribute("data-qt-anim", "in");
           return;
         }
-        document.body.appendChild(ghost);
-        ghost.addEventListener("animationend", () => ghost.remove());
-        window.setTimeout(() => ghost.remove(), 500);
+        // 잔상은 다음 프레임에 붙여(배치 계산을 나눔) 한 작업이 50ms 를 넘지 않게 한다.
+        window.requestAnimationFrame(() => window.setTimeout(() => {
+          if (quizTutorialIndex < 0) return;
+          document.body.appendChild(ghost);
+          ghost.addEventListener("animationend", () => ghost.remove());
+          window.setTimeout(() => ghost.remove(), 500);
+        }, 0));
         quizTutorialBox.setAttribute("data-qt-anim", "out");
         quizAnimTimer = window.setTimeout(() => quizTutorialBox.setAttribute("data-qt-anim", "in"), quizReducedMotion() ? 20 : 220);
       }
@@ -5059,10 +5080,6 @@
         heading.textContent = step.question;
         stepEl.appendChild(heading);
         step.render(stepEl);
-        const hint = document.createElement("p");
-        hint.className = "qt-hint";
-        hint.textContent = step.hint;
-        stepEl.appendChild(hint);
         document.getElementById("qtProgress").textContent = (index + 1) + " / " + quizTutorialSteps.length;
         document.getElementById("qtTargetName").textContent = step.title;
         document.getElementById("qtPrev").disabled = index === 0;
@@ -5072,6 +5089,11 @@
         // 무거운 배치 계산은 다음 작업으로 나눠 한 번에 50ms 를 넘지 않게 한다.
         window.requestAnimationFrame(() => window.setTimeout(() => {
           if (quizTutorialIndex !== index) return;
+          // 안내 문장은 다음 작업에서 붙여 첫 배치 비용을 나눈다.
+          const hint = document.createElement("p");
+          hint.className = "qt-hint";
+          hint.textContent = step.hint;
+          stepEl.appendChild(hint);
           const target = step.target();
           let scrolling = false;
           if (target) {
