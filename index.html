@@ -69,6 +69,7 @@
         --theme-hl-text: #9A4A00;
         --theme-glow: rgba(255, 209, 102, 0.9);
         --theme-glow-soft: rgba(255, 209, 102, 0.55);
+        --theme-dim: rgba(0, 0, 0, 0.55);
         --subj-0-bg: #FFD6CC;
         --subj-0-fg: #8A3A22;
         --subj-1-bg: #CFE6FF;
@@ -139,6 +140,7 @@
         --theme-hl-text: #8A4B00;
         --theme-glow: rgba(233, 184, 114, 0.9);
         --theme-glow-soft: rgba(233, 184, 114, 0.55);
+        --theme-dim: rgba(0, 0, 0, 0.58);
         --subj-0-bg: #F6E3CF;
         --subj-0-fg: #7A4A1E;
         --subj-1-bg: #D9ECF5;
@@ -209,6 +211,7 @@
         --theme-hl-text: #9A1F5E;
         --theme-glow: rgba(255, 111, 181, 0.9);
         --theme-glow-soft: rgba(255, 111, 181, 0.55);
+        --theme-dim: rgba(0, 0, 0, 0.6);
         --subj-0-bg: #FFD9E8;
         --subj-0-fg: #8F1F55;
         --subj-1-bg: #D9DEFF;
@@ -1787,50 +1790,78 @@
         cursor: pointer;
       }
       .tutorial-launch { flex-wrap: wrap; row-gap: 6px; }
-      .qt-highlight {
-        outline: 3px solid var(--theme-main-strong);
-        outline-offset: 2px;
-        box-shadow: 0 0 0 6px var(--theme-glow-soft);
-        scroll-margin: 16px;
-      }
+      .qt-highlight { scroll-margin: 16px; border-radius: 8px; animation: qtGlow 1.6s ease-in-out infinite; }
       .qt-box {
         position: fixed;
         z-index: 400;
         left: 12px;
         top: 12px;
         width: min(360px, calc(100vw - 24px));
+        max-height: calc(100vh - 24px);
         box-sizing: border-box;
         display: flex;
         flex-direction: column;
         background: var(--theme-card);
         border: 2px solid var(--theme-main);
-        border-radius: 14px;
+        border-top: 6px solid var(--theme-main);
+        border-radius: 16px;
         padding: 12px;
-        box-shadow: 0 12px 34px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 16px 44px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.25);
       }
+      @media (max-width: 600px) { .qt-box { max-height: 50vh; } }
       .qt-box[hidden] { display: none; }
+      .qt-box[data-qt-anim="out"] { animation: qtHold 0.22s linear forwards; }
+      .qt-box[data-qt-anim="in"] { animation: qtIn 0.25s ease-out both; }
+      .qt-ghost { pointer-events: none; animation: qtOut 0.22s ease-in forwards; }
+      @keyframes qtIn { from { opacity: 0; transform: scale(0.88); } to { opacity: 1; transform: scale(1); } }
+      @keyframes qtOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.88); } }
+      @keyframes qtHold { from { opacity: 0; transform: scale(0.88); } to { opacity: 0; transform: scale(0.88); } }
+      @keyframes qtPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+      @keyframes qtGlow { 0%, 100% { box-shadow: 0 0 0 4px var(--theme-glow-soft); } 50% { box-shadow: 0 0 0 8px var(--theme-glow-soft); } }
+      .qt-arrow { display: none; position: absolute; background: var(--theme-main); pointer-events: none; }
+      .qt-side-bottom .qt-arrow { display: block; width: 22px; height: 12px; top: -18px; clip-path: polygon(50% 0, 0 100%, 100% 100%); }
+      .qt-side-top .qt-arrow { display: block; width: 22px; height: 12px; bottom: -14px; clip-path: polygon(0 0, 100% 0, 50% 100%); }
+      .qt-side-right .qt-arrow { display: block; width: 12px; height: 22px; left: -14px; clip-path: polygon(100% 0, 100% 100%, 0 50%); }
+      .qt-side-left .qt-arrow { display: block; width: 12px; height: 22px; right: -14px; clip-path: polygon(0 0, 0 100%, 100% 50%); }
+      #qtDim { position: fixed; inset: 0; z-index: 390; pointer-events: none; }
       #qtDim[hidden] { display: none; }
-      #qtDim div { position: fixed; z-index: 390; background: rgba(0, 0, 0, 0.62); pointer-events: auto; }
-      .qt-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-weight: 800; color: var(--theme-hl-text); font-size: 0.85rem; }
+      #qtDim div { position: absolute; background: var(--theme-dim); pointer-events: auto; opacity: 0; transition: opacity 0.3s ease; }
+      #qtDim.on div { opacity: 1; }
+      #qtDim.leaving div { pointer-events: none; }
+      #qtDim.qt-geo div { transition: opacity 0.3s ease, left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease; }
+      #qtSpot { position: fixed; z-index: 395; box-sizing: border-box; border: 3px solid var(--theme-main); border-radius: 10px; pointer-events: none; animation: qtPulse 1.6s ease-in-out infinite; }
+      #qtSpot[hidden] { display: none; }
+      #qtSpot.qt-geo { transition: left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease; }
+      @media (prefers-reduced-motion: reduce) {
+        #qtDim div, #qtDim.qt-geo div, #qtSpot.qt-geo { transition-duration: 0.01s !important; }
+        #qtSpot, .qt-highlight { animation: none !important; }
+        .qt-box[data-qt-anim], .qt-ghost { animation-duration: 0.01s !important; }
+      }
+      .qt-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 800; color: var(--theme-hl-text); font-size: 0.85rem; }
+      .qt-target { background: var(--theme-main-strong); color: var(--theme-on-main); border-radius: 999px; padding: 4px 12px; font-size: 0.9rem; }
       .qt-step { overflow-y: auto; min-height: 0; }
       .qt-step h3 { margin: 0 0 6px; font-size: 1rem; color: var(--theme-main-strong); }
       .qt-hint { margin: 8px 0 0; font-size: 0.82rem; line-height: 1.4; color: var(--theme-muted); }
       .qt-choices { display: flex; flex-wrap: wrap; gap: 6px; }
       .qt-choices button, .qt-actions button {
         border: 1px solid var(--line);
-        border-radius: 8px;
+        border-radius: 10px;
         background: var(--theme-card);
         padding: 6px 10px;
-        min-width: 36px;
+        min-width: 44px;
+        min-height: 44px;
         font-weight: 700;
         cursor: pointer;
+        touch-action: manipulation;
       }
       .qt-choices button[aria-pressed="true"] { background: var(--theme-main-strong); border-color: var(--theme-main); color: var(--theme-on-main); }
       .qt-checks { display: flex; flex-wrap: wrap; gap: 6px; }
-      .qt-check { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 0.88rem; }
+      .qt-check { display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; min-height: 44px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; font-size: 0.88rem; cursor: pointer; }
+      .qt-check input { width: 20px; height: 20px; margin: 0; }
       .qt-rules { margin: 8px 0 0; padding: 0; list-style: none; font-size: 0.8rem; line-height: 1.35; }
       .qt-rules li { margin-bottom: 4px; }
-      .qt-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+      .qt-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+      .qt-actions .qt-skip { margin-right: auto; }
       .qt-actions button:disabled { opacity: 0.45; cursor: default; }
       .qt-actions .primary { background: var(--theme-main-strong); border-color: var(--theme-main); color: var(--theme-on-main); }
     </style>
@@ -1975,9 +2006,11 @@
     </div>
 
     <div id="quizTutorial" class="qt-box" role="dialog" aria-label="질문으로 설정하기" aria-live="polite" tabindex="-1" hidden>
-      <div class="qt-head"><span>질문으로 설정하기</span><span id="qtProgress" data-testid="quiz-progress"></span></div>
+      <span id="qtArrow" class="qt-arrow" aria-hidden="true"></span>
+      <div class="qt-head"><span id="qtTargetName" class="qt-target" data-testid="quiz-target-name"></span><span id="qtProgress" data-testid="quiz-progress"></span></div>
       <div id="qtStep" class="qt-step"></div>
       <div class="qt-actions">
+        <button type="button" id="qtSkip" class="qt-skip" data-testid="quiz-skip">건너뛰기</button>
         <button type="button" id="qtPrev" data-testid="quiz-prev">이전</button>
         <button type="button" id="qtNext" data-testid="quiz-next" class="primary">다음</button>
         <button type="button" id="qtClose" data-testid="quiz-close">닫기</button>
@@ -4790,44 +4823,51 @@
         }
       }
 
-      function quizOverlapArea(a, b, pad) {
-        const w = Math.min(a.right, b.right + pad) - Math.max(a.left, b.left - pad);
-        const h = Math.min(a.bottom, b.bottom + pad) - Math.max(a.top, b.top - pad);
-        return w > 0 && h > 0 ? w * h : 0;
-      }
+      let quizDimTimer = 0;
+      let quizGeoTimer = 0;
+      let quizAnimTimer = 0;
+      const quizReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-      function quizControlRects() {
-        const modalOpen = autoGenerateModal.classList.contains("open");
-        const root = modalOpen ? autoGenerateModal.querySelector(".auto-dialog") : document;
-        const clip = modalOpen ? root.getBoundingClientRect() : { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
-        const rects = [];
-        root.querySelectorAll("select, button, input, textarea, a[href]").forEach((element) => {
-          if (quizTutorialBox.contains(element) || element.closest(".specialist-menu")) return;
-          const r = element.getBoundingClientRect();
-          if (r.width <= 0 || r.height <= 0) return;
-          const c = { left: Math.max(r.left, clip.left), top: Math.max(r.top, clip.top), right: Math.min(r.right, clip.right), bottom: Math.min(r.bottom, clip.bottom) };
-          if (c.right > c.left && c.bottom > c.top) rects.push(c);
-        });
-        return rects;
-      }
-
-      function setQuizSpotlight(hole) {
+      // 덮개(#qtDim 4조각 = 구멍 둘레)와 대상 둘레 테두리(#qtSpot). hole = 대상(+열린 메뉴) 사각형, 구멍은 여기서 ±8px.
+      function setQuizSpotlight(hole, animate) {
         let dim = document.getElementById("qtDim");
+        let ring = document.getElementById("qtSpot");
+        window.clearTimeout(quizDimTimer);
         if (!hole) {
-          if (dim) dim.hidden = true;
+          if (!dim || dim.hidden) return;
+          ring.hidden = true;
+          dim.classList.remove("on", "qt-geo");
+          dim.classList.add("leaving");
+          quizDimTimer = window.setTimeout(() => { dim.hidden = true; dim.classList.remove("leaving"); }, 320);
           return;
         }
         if (!dim) {
           dim = document.createElement("div");
           dim.id = "qtDim";
           dim.setAttribute("data-testid", "quiz-dim");
+          dim.hidden = true;
           for (let i = 0; i < 4; i += 1) dim.appendChild(document.createElement("div"));
           document.body.appendChild(dim);
+          ring = document.createElement("div");
+          ring.id = "qtSpot";
+          ring.setAttribute("data-testid", "quiz-spot");
+          ring.hidden = true;
+          document.body.appendChild(ring);
         }
+        const wasHidden = dim.hidden;
         dim.hidden = false;
+        ring.hidden = false;
+        dim.classList.remove("leaving");
+        if (animate !== undefined) {
+          window.clearTimeout(quizGeoTimer);
+          const geo = animate && !wasHidden;
+          dim.classList.toggle("qt-geo", geo);
+          ring.classList.toggle("qt-geo", geo);
+          if (geo) quizGeoTimer = window.setTimeout(() => { dim.classList.remove("qt-geo"); ring.classList.remove("qt-geo"); }, 330);
+        }
         const vw = window.innerWidth;
         const vh = window.innerHeight;
-        const pad = 4;
+        const pad = 8;
         const t = Math.max(0, hole.top - pad);
         const b = Math.min(vh, hole.bottom + pad);
         const l = Math.max(0, hole.left - pad);
@@ -4836,72 +4876,76 @@
         Array.from(dim.children).forEach((part, i) => {
           part.style.cssText = "left:" + parts[i][0] + "px;top:" + parts[i][1] + "px;width:" + Math.max(0, parts[i][2]) + "px;height:" + Math.max(0, parts[i][3]) + "px;";
         });
+        ring.style.cssText = "left:" + l + "px;top:" + t + "px;width:" + Math.max(0, r - l) + "px;height:" + Math.max(0, b - t) + "px;";
+        if (wasHidden) void dim.offsetWidth;
+        dim.classList.add("on");
       }
 
-      function positionQuizBox(target) {
+      // 대상 사각형(target)과, 대상+지금 열려 있는 메뉴를 묶은 사각형(box). 메뉴가 열리면 상자가 비켜 선다.
+      function quizMeasureBox(target) {
+        const hole = target.getBoundingClientRect();
+        const box = { left: hole.left, top: hole.top, right: hole.right, bottom: hole.bottom };
+        document.querySelectorAll(".specialist-menu.open").forEach((menu) => {
+          const m = menu.getBoundingClientRect();
+          box.left = Math.min(box.left, m.left); box.top = Math.min(box.top, m.top);
+          box.right = Math.max(box.right, m.right); box.bottom = Math.max(box.bottom, m.bottom);
+        });
+        return { target: hole, box };
+      }
+
+      // 상자를 구멍 바로 옆(위·아래·좌·우 중 대상과 가장 가깝고 화면 안에 들어가는 쪽)에 붙이고 꼬리(#qtArrow)가 대상을 가리키게 한다.
+      function positionQuizBox(target, animate) {
         if (!target || quizTutorialBox.hidden) return;
         const vw = window.innerWidth;
         const vh = window.innerHeight;
         const gap = 8;
+        const arrowLen = 12;
+        const pad = 8;
         const stepEl = document.getElementById("qtStep");
         stepEl.style.maxHeight = "";
         quizTutorialBox.style.maxHeight = "";
         const width = quizTutorialBox.offsetWidth;
         const height = quizTutorialBox.offsetHeight;
-        // 강조 대상과 (열려 있으면) 그 메뉴를 묶은 '구멍'. 상자는 여기와 겹치지 않는다.
-        const hole = target.getBoundingClientRect();
-        const box = { left: hole.left, top: hole.top, right: hole.right, bottom: hole.bottom };
-        const step = quizTutorialSteps[quizTutorialIndex];
-        const reserved = step && step.menu ? step.menu() : null;
-        const reservedWasOpen = reserved && reserved.classList.contains("open");
-        if (reserved && !reservedWasOpen) reserved.classList.add("open");
-        const menus = Array.from(document.querySelectorAll(".specialist-menu.open"));
-        menus.forEach((menu) => {
-          const m = menu.getBoundingClientRect();
-          box.left = Math.min(box.left, m.left); box.top = Math.min(box.top, m.top);
-          box.right = Math.max(box.right, m.right); box.bottom = Math.max(box.bottom, m.bottom);
-        });
-        if (reserved && !reservedWasOpen) reserved.classList.remove("open");
-        const controls = quizControlRects();
-        const cx = (box.left + box.right) / 2;
-        const cy = (box.top + box.bottom) / 2;
+        const m = quizMeasureBox(target);
+        const tr = m.target;
+        const b = m.box;
+        const hole = { left: b.left - pad, top: b.top - pad, right: b.right + pad, bottom: b.bottom + pad };
+        const tcx = (tr.left + tr.right) / 2;
+        const tcy = (tr.top + tr.bottom) / 2;
+        const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, Math.max(lo, hi)));
+        const hLeft = clamp(tcx - width / 2, gap, vw - width - gap);
+        const vTop = clamp(tcy - height / 2, gap, vh - height - gap);
+        const cands = [
+          { side: "bottom", left: hLeft, top: hole.bottom + arrowLen, fit: hole.bottom + arrowLen + height <= vh - gap, dist: hole.bottom + arrowLen - tr.bottom },
+          { side: "top", left: hLeft, top: hole.top - arrowLen - height, fit: hole.top - arrowLen - height >= gap, dist: tr.top - (hole.top - arrowLen) },
+          { side: "right", left: hole.right + arrowLen, top: vTop, fit: hole.right + arrowLen + width <= vw - gap, dist: hole.right + arrowLen - tr.right },
+          { side: "left", left: hole.left - arrowLen - width, top: vTop, fit: hole.left - arrowLen - width >= gap, dist: tr.left - (hole.left - arrowLen) }
+        ];
         let best = null;
-        let bestCost = Infinity;
-        let spotlight = false;
-        const scan = (allowControls) => {
-          for (let top = gap; top <= vh - height - gap; top += 8) {
-            for (let left = gap; left <= vw - width - gap; left += 8) {
-              const r = { left, top, right: left + width, bottom: top + height };
-              if (quizOverlapArea(r, box, gap) > 0) continue;
-              let area = 0;
-              for (const c of controls) area += quizOverlapArea(r, c, 4);
-              if (area > 0 && !allowControls) continue;
-              const dist = Math.hypot((left + width / 2) - cx, (top + height / 2) - cy);
-              const cost = area * 1000 + dist;
-              if (cost < bestCost) { bestCost = cost; best = { left, top }; }
-            }
-          }
-        };
-        scan(false);
+        cands.forEach((c) => { if (c.fit && (!best || c.dist < best.dist - 0.5)) best = c; });
         if (!best) {
-          // 빈 자리가 없으면 강조 대상만 밝게, 나머지는 어둡게(클릭 막힘) 하고 덜 가리는 곳에 둔다.
-          spotlight = true;
-          scan(true);
-        }
-        if (!best) {
-          const below = vh - box.bottom - gap * 2;
-          const above = box.top - gap * 2;
-          const useBelow = below >= above;
-          const room = Math.max(120, useBelow ? below : above);
+          // 어느 쪽에도 안 들어가면 더 넓은 쪽(위/아래)에 높이를 줄이고 카드 안 스크롤로 둔다.
+          const roomBelow = vh - gap - (hole.bottom + arrowLen);
+          const roomAbove = hole.top - arrowLen - gap;
+          const useBelow = roomBelow >= roomAbove;
+          const room = Math.max(120, useBelow ? roomBelow : roomAbove);
           quizTutorialBox.style.maxHeight = room + "px";
           const fixedPart = quizTutorialBox.offsetHeight - stepEl.offsetHeight;
           stepEl.style.maxHeight = Math.max(60, room - fixedPart) + "px";
-          best = { left: Math.max(gap, Math.min(hole.left, vw - width - gap)), top: useBelow ? box.bottom + gap : Math.max(gap, box.top - gap - quizTutorialBox.offsetHeight) };
+          const h2 = quizTutorialBox.offsetHeight;
+          best = { side: useBelow ? "bottom" : "top", left: hLeft, top: useBelow ? hole.bottom + arrowLen : Math.max(gap, hole.top - arrowLen - h2) };
         }
+        const arrow = document.getElementById("qtArrow");
+        arrow.style.left = "";
+        arrow.style.top = "";
+        if (best.side === "bottom" || best.side === "top") arrow.style.left = (clamp(tcx - best.left, 22, width - 22) - 2 - 11) + "px";
+        else arrow.style.top = (clamp(tcy - best.top, 22, quizTutorialBox.offsetHeight - 22) - 6 - 11) + "px";
         quizTutorialBox.style.left = best.left + "px";
         quizTutorialBox.style.top = best.top + "px";
-        quizTutorialBox.setAttribute("data-qt-place", spotlight ? "spotlight" : "free");
-        setQuizSpotlight(spotlight ? box : null);
+        quizTutorialBox.className = "qt-box qt-side-" + best.side;
+        quizTutorialBox.setAttribute("data-qt-side", best.side);
+        quizTutorialBox.setAttribute("data-qt-place", "spotlight");
+        setQuizSpotlight(b, animate);
       }
 
       function repositionQuizBox() {
@@ -4919,9 +4963,48 @@
         }, 30);
       }
 
+      // 대상(+메뉴)이 화면 밖이면 부드럽게 스크롤한다. 스크롤했으면 true.
+      function quizScrollToTarget(target, step) {
+        const b = quizMeasureBox(target).box;
+        if (b.top >= 8 && b.bottom <= window.innerHeight - 8) return false;
+        target.scrollIntoView({ behavior: quizReducedMotion() ? "auto" : "smooth", block: step.needsAutoModal ? "center" : "start", inline: "nearest" });
+        return true;
+      }
+
+      // 단계 이동 때 이전 상자 모양을 복사해 작아지며 사라지게 하는 '잔상'
+      function quizMakeGhost() {
+        if (quizTutorialBox.hidden || quizTutorialBox.getAttribute("data-qt-anim") === "out") return null;
+        const ghost = quizTutorialBox.cloneNode(true);
+        ["id", "role", "tabindex", "aria-live", "data-qt-anim", "data-qt-side", "data-qt-place"].forEach((name) => ghost.removeAttribute(name));
+        ghost.setAttribute("aria-hidden", "true");
+        ghost.setAttribute("inert", "");
+        ghost.classList.add("qt-ghost");
+        ghost.querySelectorAll("*").forEach((element) => {
+          Array.from(element.attributes).forEach((attr) => {
+            if (attr.name === "id" || attr.name === "data-testid" || attr.name.indexOf("data-qt") === 0) element.removeAttribute(attr.name);
+          });
+        });
+        return ghost;
+      }
+
+      function quizPlayCardAnim(ghost) {
+        window.clearTimeout(quizAnimTimer);
+        if (!ghost) {
+          quizTutorialBox.setAttribute("data-qt-anim", "in");
+          return;
+        }
+        document.body.appendChild(ghost);
+        ghost.addEventListener("animationend", () => ghost.remove());
+        window.setTimeout(() => ghost.remove(), 500);
+        quizTutorialBox.setAttribute("data-qt-anim", "out");
+        quizAnimTimer = window.setTimeout(() => quizTutorialBox.setAttribute("data-qt-anim", "in"), quizReducedMotion() ? 20 : 220);
+      }
+
       function showQuizStep(index) {
         const step = quizTutorialSteps[index];
         if (!step) return;
+        const moved = !quizTutorialBox.hidden && quizTutorialIndex >= 0 && quizTutorialIndex !== index;
+        const ghost = moved ? quizMakeGhost() : null;
         quizTutorialIndex = index;
         if (step.needsAutoModal) {
           if (!autoGenerateModal.classList.contains("open")) {
@@ -4943,16 +5026,23 @@
         hint.className = "qt-hint";
         hint.textContent = step.hint;
         stepEl.appendChild(hint);
-        document.getElementById("qtProgress").textContent = (index + 1) + "/" + quizTutorialSteps.length;
+        document.getElementById("qtProgress").textContent = (index + 1) + " / " + quizTutorialSteps.length;
+        document.getElementById("qtTargetName").textContent = step.title;
         document.getElementById("qtPrev").disabled = index === 0;
         document.getElementById("qtNext").textContent = index === quizTutorialSteps.length - 1 ? "마침" : "다음";
-        const target = step.target();
-        if (target) {
-          target.classList.add("qt-highlight");
-          target.scrollIntoView({ block: step.needsAutoModal ? "center" : "start", inline: "nearest" });
-        }
         quizTutorialBox.hidden = false;
-        positionQuizBox(target);
+        quizPlayCardAnim(ghost);
+        // 무거운 배치 계산은 다음 작업으로 나눠 한 번에 50ms 를 넘지 않게 한다.
+        window.setTimeout(() => {
+          if (quizTutorialIndex !== index) return;
+          const target = step.target();
+          let scrolling = false;
+          if (target) {
+            target.classList.add("qt-highlight");
+            scrolling = quizScrollToTarget(target, step);
+          }
+          positionQuizBox(target, !scrolling);
+        }, 0);
         window.setTimeout(repositionQuizBox, 120);
       }
 
@@ -4972,6 +5062,9 @@
         document.removeEventListener("click", repositionQuizBoxSoon);
         document.removeEventListener("change", repositionQuizBoxSoon);
         quizTutorialIndex = -1;
+        window.clearTimeout(quizAnimTimer);
+        quizTutorialBox.removeAttribute("data-qt-anim");
+        document.querySelectorAll(".qt-ghost").forEach((ghost) => ghost.remove());
         quizTutorialBox.hidden = true;
         setQuizSpotlight(null);
         clearQuizHighlight();
@@ -5000,6 +5093,7 @@
           else showQuizStep(quizTutorialIndex + 1);
         });
         document.getElementById("qtClose").addEventListener("click", endQuizTutorial);
+        document.getElementById("qtSkip").addEventListener("click", endQuizTutorial);
       }
       setupQuizTutorial();
 
