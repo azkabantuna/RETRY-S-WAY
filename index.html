@@ -153,27 +153,27 @@
         --subj-5-fg: #7A3328;
         --subj-6-bg: #A6DFB1;
         --subj-6-fg: #285A2F;
-        --subj-7-bg: #8CEFFD;
-        --subj-7-fg: #15655D;
+        --subj-7-bg: #99D9EB;
+        --subj-7-fg: #304D56;
         --subj-8-bg: #D6E49E;
         --subj-8-fg: #4A581F;
-        --subj-9-bg: #FACFFC;
+        --subj-9-bg: #F2CBF4;
         --subj-9-fg: #7E1B7E;
-        --subj-10-bg: #9BDAFD;
-        --subj-10-fg: #0B586A;
-        --subj-11-bg: #8CFDDC;
-        --subj-11-fg: #306556;
-        --subj-12-bg: #F8C4D0;
+        --subj-10-bg: #ACCDED;
+        --subj-10-fg: #204A68;
+        --subj-11-bg: #E9CB97;
+        --subj-11-fg: #5C4610;
+        --subj-12-bg: #F2BFCA;
         --subj-12-fg: #7E1B43;
-        --subj-13-bg: #C4D8FD;
+        --subj-13-bg: #C2C7F0;
         --subj-13-fg: #1B497E;
-        --subj-14-bg: #CAC1EA;
+        --subj-14-bg: #CFC1DA;
         --subj-14-fg: #531B7E;
-        --subj-15-bg: #E9CB97;
+        --subj-15-bg: #DFC1A8;
         --subj-15-fg: #5C4610;
-        --subj-16-bg: #EFBBAD;
+        --subj-16-bg: #F0BAAF;
         --subj-16-fg: #1B1B7E;
-        --subj-17-bg: #FEBB8D;
+        --subj-17-bg: #D0C4BD;
         --subj-17-fg: #693B18;
       }
 
@@ -3073,6 +3073,7 @@
           item.style.left = `${(size * index).toFixed(2)}%`;
           item.style.width = `${size.toFixed(2)}%`;
           item.textContent = ref.text;
+          if (ref.fg) item.style.color = ref.fg;
           layer.appendChild(item);
         });
 
