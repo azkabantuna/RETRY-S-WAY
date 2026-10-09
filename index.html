@@ -559,10 +559,6 @@
         pointer-events: auto;
       }
 
-      .teacher-menu.open {
-        display: block;
-      }
-
       .pe-quick-menu {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -1453,6 +1449,182 @@
           box-shadow: 0 0 0 7px #fde68a, 0 0 38px rgba(250, 204, 21, 0.55);
         }
       }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <h1>학급별 주간 시간표</h1>
+      <div class="tutorial-launch">
+        <button id="tutorialStartBtn" class="tutorial-start-btn" type="button">사용법 보기</button>
+      </div>
+      <section class="usage-guide" aria-label="사용 방법 안내">
+        <ol>
+          <li>반 개수, 교시 수를 먼저 설정하세요.</li>
+          <li>전담 과목 / 담임 과목을 선택하세요. (전담: 여러 교실에 중복되면 안되는 과목)</li>
+          <li>전담 시간표에서 셀 선택 후 Enter → 배치 가능(O) 표시</li>
+          <li>체육은 셀 클릭 후 강당/운동장 가능 시간 따로 설정</li>
+          <li>반별 시간표에서 셀 선택 후 Enter → 전담 배치 제외</li>
+          <li>시수, 담당 교사, 연차시를 설정하세요.</li>
+          <li>자동 생성으로 시간표를 만들고, 필요 시 다시 생성하세요.</li>
+        </ol>
+        <div class="credit-note">
+          제작: github: azkabantuna ·
+          <a href="https://blog.naver.com/2808happy/224221469217" target="_blank" rel="noopener noreferrer">
+            치다랑어의 블로그
+          </a>
+        </div>
+      </section>
+
+      .tutorial-highlight {
+        position: relative;
+        z-index: 250 !important;
+        border-radius: 10px;
+        box-shadow: 0 0 0 4px #facc15, 0 0 28px rgba(250, 204, 21, 0.9);
+        animation: tutorialHighlightPulse 2s ease-in-out infinite;
+      }
+
+      .tutorial-highlight-pulse {
+        animation: tutorialHighlightPulse 2s ease-in-out infinite;
+      }
+
+      .tutorial-elevated {
+        position: relative;
+        z-index: 260 !important;
+      }
+
+      .tutorial-elevated .specialist-menu.open,
+      .tutorial-elevated .class-select-menu,
+      .tutorial-elevated .pe-quick-menu,
+      body.tutorial-active .specialist-menu.open,
+      body.tutorial-active .class-select-menu,
+      body.tutorial-active .pe-quick-menu,
+      body.tutorial-active .pe-picker-modal.open {
+        z-index: 340 !important;
+        pointer-events: auto;
+      }
+
+      .tutorial-tooltip {
+        position: fixed;
+        z-index: 300;
+        width: min(340px, calc(100vw - 24px));
+        border: 1px solid #bfdbfe;
+        border-radius: 14px;
+        background: #ffffff;
+        padding: 14px;
+        box-shadow: 0 12px 34px rgba(15, 23, 42, 0.28);
+        pointer-events: auto;
+        cursor: move;
+        user-select: none;
+      }
+
+      .tutorial-tooltip button {
+        cursor: pointer;
+      }
+
+      .tutorial-tooltip h3 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+        color: #1d4ed8;
+      }
+
+      .tutorial-tooltip p {
+        margin: 0;
+        line-height: 1.45;
+        font-size: 0.9rem;
+      }
+
+      .tutorial-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .tutorial-actions button {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 6px 10px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .tutorial-actions .primary {
+        border-color: #2563eb;
+        background: #2563eb;
+        color: #fff;
+      }
+
+      .tutorial-actions .danger {
+        border-color: #ef4444;
+        background: #fee2e2;
+        color: #b91c1c;
+      }
+
+      .text-input-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 500;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.45);
+        padding: 16px;
+      }
+
+      .text-input-modal.open {
+        display: flex;
+      }
+
+      .text-input-dialog {
+        width: min(360px, calc(100vw - 32px));
+        border-radius: 14px;
+        background: #fff;
+        padding: 18px;
+        box-shadow: 0 16px 42px rgba(15, 23, 42, 0.28);
+      }
+
+      .text-input-dialog h2 {
+        margin: 0 0 10px;
+        font-size: 1rem;
+        color: #1f2937;
+      }
+
+      .text-input-dialog input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 9px 10px;
+        font-size: 0.95rem;
+      }
+
+      .text-input-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .text-input-actions button {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 7px 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .text-input-actions .confirm {
+        border-color: #2563eb;
+        background: #2563eb;
+        color: #fff;
+      }
+      .auto-excluded-slot {
+        background: #fff7ed !important;
+        color: #b45309 !important;
+        font-weight: 700 !important;
+      }
 
       @media (max-width: 1400px) {
         .timetable-grid {
@@ -1830,7 +2002,6 @@
           selectedSpecialists.add(PE_SUBJECT);
           return PE_SUBJECT;
         }
-        if (selectedHomerooms.has(trimmed)) return trimmed;
         const normalized = registerCustomSubject(trimmed);
         if (!normalized) return "";
         selectedSpecialists.add(normalized);
@@ -1861,8 +2032,6 @@
       }
 
       function getEntry(className, day, period) {
-        // 꺼진 칸(휴일·마지막 교시 끔)은 입력을 지우지 않고 숨기기만 한다(최대 교시를 바꿔도 보존)
-        if (isDisabledSlot(day, period)) return null;
         return subjectStore[getCellKey(className, day, period)] || null;
       }
 
@@ -1879,8 +2048,7 @@
       }
 
       function getDailySubjectLimit(subject) {
-        // 체육은 2연차시(묶음)일 때만 하루 2칸을 허용한다
-        if (subject === PE_SUBJECT) return getSeriesMode(subject) === "double" ? 2 : 1;
+        if (subject === PE_SUBJECT) return 1;
         return getSeriesMode(subject) === "impossible" ? 1 : 2;
       }
 
@@ -2025,6 +2193,15 @@
             specialistExcludedSlots.delete(key);
           }
         }
+      }
+
+      function clearAllDisabledSlotEntries() {
+        disabledLastPeriodDays.forEach((day) => {
+          clearDisabledLastPeriodEntriesForDay(day);
+        });
+        holidayDays.forEach((day) => {
+          clearHolidayEntriesForDay(day);
+        });
       }
 
       function renderLastPeriodToggleRow() {
@@ -2524,9 +2701,6 @@
                     assignmentLabels.push(`${placeName[0]}${classesByPlace.join(",")}`);
                   }
                 });
-                // 장소 없이 배정된 체육(장소를 칠하지 않고 자동 생성)은 장소 글자 없이 반 번호만 보여 준다
-                const noPlaceClasses = matchedEntries.filter((item) => !item.pePlace).map((item) => item.classNumber);
-                if (noPlaceClasses.length) assignmentLabels.push(noPlaceClasses.join(","));
                 if (assignmentLabels.length) {
                   td.style.backgroundImage = "";
                   td.style.background = "#e5e7eb";
@@ -2592,8 +2766,6 @@
                 editSpecialistCell(td, tableName, day, period);
               });
               td.addEventListener("keydown", (event) => {
-                // 칸 안 메뉴 버튼에서 올라온 키는 버튼이 직접 처리한다(Enter 로 반 번호·X 선택)
-                if (event.target !== td) return;
                 if (/^\d$/.test(event.key)) {
                   const classNumber = Number(event.key);
                   if (classNumber >= 1 && classNumber <= classCount) {
@@ -2752,8 +2924,8 @@
           if (!existing || !isSpecialistSubject(existing.subject)) continue;
 
           if (nextEntry.subject === "체육" && existing.subject === "체육") {
-            if ((existing.pePlace || "") === (nextEntry.pePlace || "")) {
-              return `${day} ${period}교시에는 ${nextEntry.pePlace ? `${nextEntry.pePlace} ` : ""}체육이 이미 다른 반에 배치되어 있습니다.`;
+            if (existing.pePlace === nextEntry.pePlace) {
+              return `${day} ${period}교시에는 ${nextEntry.pePlace} 체육이 이미 다른 반에 배치되어 있습니다.`;
             }
             continue;
           }
@@ -2880,18 +3052,8 @@
         return false;
       }
 
-      function hasAnyPeAvailability() {
-        return Object.values(peAvailableSlots).some((places) => Object.values(places || {}).some(Boolean));
-      }
-
-      // 체육 장소를 하나도 칠하지 않았으면 장소 없이 모든 칸에 배치할 수 있다(칠했으면 칠한 칸·장소만)
-      function getAutoPePlaceChoices() {
-        return hasAnyPeAvailability() ? getAllPePlaceNames() : [""];
-      }
-
       function isSpecialistSlotAllowedByAvailability(subject, day, period, pePlace = "") {
         if (subject === "체육") {
-          if (!hasAnyPeAvailability()) return true;
           const peAvailability = getPeAvailability(day, period);
           if (pePlace) return Boolean(peAvailability[pePlace]);
           return Object.values(peAvailability).some(Boolean);
@@ -2959,8 +3121,6 @@
         const candidates = [];
         const specialistType = subjectType === "specialist";
         const dailyLimit = getDailySubjectLimit(subject);
-        const pePlaceChoices = subject === "체육" ? getAutoPePlaceChoices() : [];
-        const usedPePlaces = new Set(pePlaceChoices.filter((place) => place && hasPePlaceAssignedForClass(className, place)));
 
         for (let period = 1; period <= maxPeriodCount; period += 1) {
           for (const day of days) {
@@ -2973,12 +3133,17 @@
             if (!specialistType && !canPlaceHomeroomSubjectAt(className, day, period, subject)) continue;
 
             if (subject === "체육") {
-              for (const pePlace of pePlaceChoices) {
-                const candidate = pePlace ? { subject: "체육", pePlace } : { subject: "체육" };
+              const orderedPePlaces = getAllPePlaceNames().sort(
+                (a, b) =>
+                  getPePlaceAssignCountForClass(className, a) - getPePlaceAssignCountForClass(className, b)
+              );
+              for (const pePlace of orderedPePlaces) {
+                if (hasPePlaceAssignedForClass(className, pePlace)) continue;
+                const candidate = { subject: "체육", pePlace };
                 if (specialistType && !isSpecialistSlotAllowedByAvailability(subject, day, period, pePlace)) continue;
                 if (!specialistType || !hasSpecialistConflict(className, day, period, candidate, false)) {
                   if (specialistType && wouldCreateThreeConsecutiveSpecialists(className, day, period, candidate)) continue;
-                  candidates.push({ day, period, entry: candidate, placeUsed: usedPePlaces.has(pePlace) });
+                  candidates.push({ day, period, entry: candidate });
                 }
               }
             } else {
@@ -2992,97 +3157,69 @@
         }
 
         if (!candidates.length) return null;
-        // 체육은 반 안에서 아직 안 쓴 장소를 먼저 고르고, 없으면 쓴 장소도 허용한다
-        const unusedPlaceCandidates = candidates.filter((item) => !item.placeUsed);
-        const pool = unusedPlaceCandidates.length ? unusedPlaceCandidates : candidates;
-        const randomIndex = Math.floor(Math.random() * pool.length);
-        const picked = pool[randomIndex];
-        return { day: picked.day, period: picked.period, entry: picked.entry };
-      }
-
-      // 묶음(연차시) 전체를 한 번에 놓았을 때 전담 3연속이 생기는지 본다(칸별로 따로 보면 둘째 칸에서 막혀 첫 칸만 남는다)
-      function wouldBundleCreateThreeConsecutiveSpecialists(className, slots) {
-        if (!slots.length) return false;
-        const day = slots[0].day;
-        let consecutive = 0;
-        for (let currentPeriod = 1; currentPeriod <= maxPeriodCount; currentPeriod += 1) {
-          const slot = slots.find((item) => item.period === currentPeriod);
-          const currentEntry = slot ? slot.entry : getEntry(className, day, currentPeriod);
-          if (currentEntry && isSpecialistSubject(currentEntry.subject)) {
-            consecutive += 1;
-            if (consecutive >= 3) return true;
-          } else {
-            consecutive = 0;
-          }
-        }
-        return false;
+        const randomIndex = Math.floor(Math.random() * candidates.length);
+        return candidates[randomIndex];
       }
 
       function findRandomAutoAssignableBundle(className, subject, bundleSize, subjectType = "specialist") {
         if (bundleSize <= 1) return findRandomAutoAssignableSlot(className, subject, subjectType);
         const candidates = [];
         const dailyLimit = getDailySubjectLimit(subject);
-        const pePlaceChoices = subject === PE_SUBJECT ? getAutoPePlaceChoices() : [""];
-        const usedPePlaces = new Set(
-          pePlaceChoices.filter((place) => place && hasPePlaceAssignedForClass(className, place))
-        );
 
         for (const day of days) {
           if (countSubjectOnDayForClass(className, day, subject) + bundleSize > dailyLimit) continue;
           for (let start = 1; start <= maxPeriodCount - bundleSize + 1; start += 1) {
-            // 묶음의 모든 칸은 같은 장소(체육)를 쓴다
-            for (const pePlace of pePlaceChoices) {
-              const slots = [];
-              let valid = true;
-              for (let offset = 0; offset < bundleSize; offset += 1) {
-                const period = start + offset;
-                if (isDisabledSlot(day, period)) {
-                  valid = false;
-                  break;
-                }
-                if (getEntry(className, day, period)) {
-                  valid = false;
-                  break;
-                }
-                if (subjectType === "specialist") {
-                  if (specialistExcludedSlots.has(getCellKey(className, day, period))) {
-                    valid = false;
-                    break;
-                  }
-                  if (!isSpecialistSlotAllowedByAvailability(subject, day, period, pePlace)) {
-                    valid = false;
-                    break;
-                  }
-                }
-                if (subjectType !== "specialist" && !canPlaceHomeroomSubjectAt(className, day, period, subject)) {
-                  valid = false;
-                  break;
-                }
-                slots.push({ day, period, entry: pePlace ? { subject, pePlace } : { subject } });
+            const slots = [];
+            let valid = true;
+            for (let offset = 0; offset < bundleSize; offset += 1) {
+              const period = start + offset;
+              if (isDisabledSlot(day, period)) {
+                valid = false;
+                break;
               }
-              if (!valid) continue;
+              if (getEntry(className, day, period)) {
+                valid = false;
+                break;
+              }
               if (subjectType === "specialist") {
-                for (const slot of slots) {
-                  if (hasSpecialistConflict(className, slot.day, slot.period, slot.entry, false)) {
-                    valid = false;
-                    break;
-                  }
+                if (specialistExcludedSlots.has(getCellKey(className, day, period))) {
+                  valid = false;
+                  break;
                 }
-                if (valid && wouldBundleCreateThreeConsecutiveSpecialists(className, slots)) valid = false;
+                if (!isSpecialistSlotAllowedByAvailability(subject, day, period)) {
+                  valid = false;
+                  break;
+                }
               }
-              if (valid) {
-                const edgeDistance = Math.min(start - 1, maxPeriodCount - (start + bundleSize - 1));
-                candidates.push({ slots, edgeDistance, placeUsed: usedPePlaces.has(pePlace) });
+              if (subjectType !== "specialist" && !canPlaceHomeroomSubjectAt(className, day, period, subject)) {
+                valid = false;
+                break;
               }
+              slots.push({ day, period, entry: { subject } });
+            }
+            if (!valid) continue;
+            if (subjectType === "specialist") {
+              for (const slot of slots) {
+                if (hasSpecialistConflict(className, slot.day, slot.period, slot.entry, false)) {
+                  valid = false;
+                  break;
+                }
+                if (wouldCreateThreeConsecutiveSpecialists(className, slot.day, slot.period, slot.entry)) {
+                  valid = false;
+                  break;
+                }
+              }
+            }
+            if (valid) {
+              const edgeDistance = Math.min(start - 1, maxPeriodCount - (start + bundleSize - 1));
+              candidates.push({ slots, edgeDistance });
             }
           }
         }
         if (!candidates.length) return null;
-        const unusedPlaceCandidates = candidates.filter((item) => !item.placeUsed);
-        const placeFiltered = unusedPlaceCandidates.length ? unusedPlaceCandidates : candidates;
-        const minDistance = Math.min(...placeFiltered.map((item) => item.edgeDistance));
-        const edgePreferred = placeFiltered.filter((item) => item.edgeDistance === minDistance);
-        const pool = edgePreferred.length ? edgePreferred : placeFiltered;
+        const minDistance = Math.min(...candidates.map((item) => item.edgeDistance));
+        const edgePreferred = candidates.filter((item) => item.edgeDistance === minDistance);
+        const pool = edgePreferred.length ? edgePreferred : candidates;
         return pool[Math.floor(Math.random() * pool.length)].slots;
       }
 
@@ -3090,6 +3227,15 @@
         if (bundleSize > 1) {
           return "연차시 조건 충돌(연속 가능한 시간대 부족)";
         }
+        if (subject === PE_SUBJECT) {
+          const allPePlacesUsed = getAllPePlaceNames().every((pePlace) =>
+            hasPePlaceAssignedForClass(className, pePlace)
+          );
+          if (allPePlacesUsed) {
+            return "같은 공간 체육 중복 금지 규칙으로 배치 불가";
+          }
+        }
+
         let candidateCount = 0;
         let afterDisabled = 0;
         let afterOccupied = 0;
@@ -3131,23 +3277,16 @@
         return `복합 제약으로 배치 불가(후보 ${afterConsecutive}/${candidateCount})`;
       }
 
-      // 자동으로 넣은 칸(source "auto")을 과목과 상관없이 모두 지운다(직접 입력한 칸은 유지)
-      function clearAutoGeneratedEntries() {
+      function clearAutoGeneratedEntriesForSubjects(subjects) {
+        const subjectSet = new Set(subjects);
         Object.keys(subjectStore).forEach((key) => {
           const entry = subjectStore[key];
           if (!entry) return;
           if (entry.source !== "auto") return;
-          delete subjectStore[key];
+          if (subjectSet.has(entry.subject)) {
+            delete subjectStore[key];
+          }
         });
-      }
-
-      // 연차시 묶음이 일부만 들어갔으면 들어간 칸을 지우고 0 을 돌려준다(외톨이 연차시 칸 방지)
-      function rollbackPartialBundle(className, bundle, assignedCount) {
-        if (!Array.isArray(bundle) || assignedCount >= bundle.length) return assignedCount;
-        bundle.slice(0, assignedCount).forEach((slot) => {
-          delete subjectStore[getCellKey(className, slot.day, slot.period)];
-        });
-        return 0;
       }
 
       async function runAutoGenerateFromSettings() {
@@ -3166,6 +3305,7 @@
           targetCounts[subject] = count;
           autoGenerateSubjectCounts[subject] = count;
         });
+        const subjectsToClear = Object.keys(targetCounts);
         const classes = buildClasses(classCount);
         const specialistSubjectsToAssign = sortSubjectsByBaseOrder(
           Object.keys(targetCounts).filter((subject) => selectedSpecialists.has(subject))
@@ -3226,7 +3366,6 @@
                   if (!assignedOk) break;
                   assignedCount += 1;
                 }
-                assignedCount = rollbackPartialBundle(className, bundle, assignedCount);
                 if (!assignedCount) {
                   specialistShortages.push({
                     className,
@@ -3240,6 +3379,8 @@
               }
             }
           }
+
+          if (specialistShortages.length) return { specialistShortages, homeroomShortages };
 
           for (const className of shuffledClasses) {
             for (const subject of orderedHomeroomSubjects) {
@@ -3273,7 +3414,6 @@
                   if (!assignedOk) break;
                   assignedCount += 1;
                 }
-                assignedCount = rollbackPartialBundle(className, bundle, assignedCount);
                 if (!assignedCount) {
                   homeroomShortages.push({
                     className,
@@ -3294,13 +3434,9 @@
         let bestResult = null;
         let bestSnapshot = null;
         for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-          clearAutoGeneratedEntries();
+          clearAutoGeneratedEntriesForSubjects(subjectsToClear);
           const attemptResult = await runSingleAttempt();
-          // 시도 순위는 부족한 시수의 합(칸 개수가 아니라 lack 합)
-          const totalShortage = [...attemptResult.specialistShortages, ...attemptResult.homeroomShortages].reduce(
-            (sum, item) => sum + item.lack,
-            0
-          );
+          const totalShortage = attemptResult.specialistShortages.length + attemptResult.homeroomShortages.length;
           if (!bestResult || totalShortage < bestResult.totalShortage) {
             bestResult = { ...attemptResult, totalShortage, attempt };
             bestSnapshot = JSON.parse(JSON.stringify(subjectStore));
@@ -3411,11 +3547,8 @@
 
               const nextSubject = value.trim();
               if (!nextSubject) {
-                if (existingEntry) {
-                  // 입력이 있던 칸을 비우기만 한다(전담 제외 표시는 바꾸지 않음)
-                  delete subjectStore[key];
-                  cell.textContent = "";
-                } else if (specialistExcludedSlots.has(key)) {
+                delete subjectStore[key];
+                if (specialistExcludedSlots.has(key)) {
                   specialistExcludedSlots.delete(key);
                   cell.textContent = "";
                 } else {
@@ -3452,10 +3585,7 @@
               cell.addEventListener("keydown", (event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
-                  // 제한 안내('국X')는 칸 글자가 아니므로 빼고 판단한다
-                  const ownTextCell = cell.cloneNode(true);
-                  ownTextCell.querySelectorAll(".cell-restrictions").forEach((hint) => hint.remove());
-                  if (event.key === "Enter" && ownTextCell.textContent.trim()) {
+                  if (event.key === "Enter" && cell.textContent.trim()) {
                     delete subjectStore[key];
                     specialistExcludedSlots.delete(key);
                     renderTimetables();
@@ -3478,6 +3608,7 @@
       }
 
       function renderTimetables() {
+        clearAllDisabledSlotEntries();
         const classes = buildClasses(classCount);
         const periods = buildPeriods(maxPeriodCount);
 
@@ -3637,6 +3768,66 @@
         renderTimetables();
       }
 
+      function applyPeAvailabilitySelection(day, period, placeName) {
+        const current = getPeAvailability(day, period);
+        setPeAvailability(day, period, { ...current, [placeName]: !current[placeName] });
+        renderTimetables();
+      }
+
+      function applyPeAvailabilitySelection(day, period, placeName) {
+        const current = getPeAvailability(day, period);
+        setPeAvailability(day, period, { ...current, [placeName]: !current[placeName] });
+        renderTimetables();
+      }
+
+      function applyPeAvailabilitySelection(day, period, placeName) {
+        const current = getPeAvailability(day, period);
+        setPeAvailability(day, period, { ...current, [placeName]: !current[placeName] });
+        renderTimetables();
+      }
+
+      function applyPeAvailabilitySelection(day, period, placeName) {
+        const current = getPeAvailability(day, period);
+        setPeAvailability(day, period, { ...current, [placeName]: !current[placeName] });
+        renderTimetables();
+      }
+
+      function applyPeAvailabilitySelection(day, period, placeName) {
+        const current = getPeAvailability(day, period);
+        setPeAvailability(day, period, { ...current, [placeName]: !current[placeName] });
+        renderTimetables();
+      }
+
+      function applyPeAvailabilitySelection(day, period, placeName) {
+        const current = getPeAvailability(day, period);
+        setPeAvailability(day, period, { ...current, [placeName]: !current[placeName] });
+        renderTimetables();
+      }
+
+      function applyPeAvailabilitySelection(day, period, placeName) {
+        const current = getPeAvailability(day, period);
+        setPeAvailability(day, period, { ...current, [placeName]: !current[placeName] });
+        renderTimetables();
+      }
+
+      function applyPeAvailabilitySelection(day, period, placeName) {
+        const current = getPeAvailability(day, period);
+        setPeAvailability(day, period, { ...current, [placeName]: !current[placeName] });
+        renderTimetables();
+      }
+
+      function applyPeAvailabilitySelection(day, period, placeName) {
+        const current = getPeAvailability(day, period);
+        setPeAvailability(day, period, { ...current, [placeName]: !current[placeName] });
+        renderTimetables();
+      }
+
+      function applyPeAvailabilitySelection(day, period, placeName) {
+        const current = getPeAvailability(day, period);
+        setPeAvailability(day, period, { ...current, [placeName]: !current[placeName] });
+        renderTimetables();
+      }
+
       function editSpecialistCell(cell, tableName, day, period) {
         document.querySelectorAll(".class-select-menu").forEach((menu) => menu.remove());
 
@@ -3753,7 +3944,7 @@
             return;
           }
           if (tableName !== "체육") {
-            if (event.key !== "Enter" || event.target !== menu) return;
+            if (event.key !== "Enter") return;
             event.preventDefault();
             event.stopPropagation();
             toggleSpecialistAvailabilitySlot(tableName, day, period);
@@ -3951,13 +4142,7 @@
         }
       }
 
-      function handleTutorialEscape(event) {
-        if (event.key !== "Escape" || event.defaultPrevented) return;
-        endTutorial();
-      }
-
       function endTutorial() {
-        document.removeEventListener("keydown", handleTutorialEscape);
         removeTutorialDom();
         closeTutorialOwnedModal();
         stopTutorialTooltipDrag();
@@ -4185,7 +4370,6 @@
         endTutorial();
         currentTutorialIndex = 0;
         document.body.classList.add("tutorial-active");
-        document.addEventListener("keydown", handleTutorialEscape);
         window.addEventListener("resize", repositionTutorialTooltip);
         window.addEventListener("scroll", repositionTutorialTooltip, true);
         showTutorialStep(currentTutorialIndex, 1);
