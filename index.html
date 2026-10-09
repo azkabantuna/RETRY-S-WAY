@@ -2032,6 +2032,16 @@
         touch-action: manipulation;
       }
       .qt-choices button[aria-pressed="true"] { background: var(--theme-main-strong); border-color: var(--theme-main); color: var(--theme-on-main); }
+      .qt-choices .qt-class-pencil { position: relative; }
+      .qt-class-pencil::before { content: "\270F\FE0F"; font-size: 1.1rem; line-height: 1; }
+      .qt-class-pencil[data-qt-value]::after { content: attr(data-qt-value); position: absolute; right: 3px; bottom: 1px; font-size: 0.7rem; font-weight: 800; line-height: 1; }
+      .qt-class-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+      .qt-class-row[hidden], .qt-class-error[hidden] { display: none; }
+      .qt-class-row input { box-sizing: border-box; width: 110px; min-height: 48px; border: 1px solid var(--line); border-radius: 10px; padding: 4px 10px; font-size: 1rem; background: var(--theme-card); color: var(--theme-text); }
+      .qt-class-row button { min-width: 48px; min-height: 48px; border: 1px solid var(--theme-main); border-radius: 10px; padding: 6px 14px; font-weight: 700; cursor: pointer; touch-action: manipulation; background: var(--theme-main-strong); color: var(--theme-on-main); }
+      .qt-step:has(.qt-class-row:not([hidden])) .qt-hint { display: none; }
+      .qt-step:has(.qt-class-row:not([hidden])) h3 { margin-bottom: 2px; font-size: 0.95rem; }
+      .qt-class-error { margin: 2px 0 0; font-size: 0.8rem; font-weight: 600; line-height: 1.1; color: var(--danger-text); }
       .qt-checks { display: flex; flex-wrap: wrap; gap: 6px; }
       .qt-check { display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; min-height: 48px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; font-size: 0.88rem; cursor: pointer; }
       .qt-check input { width: 20px; height: 20px; margin: 0; }
@@ -5035,22 +5045,112 @@
             const box = document.createElement("div");
             box.className = "qt-choices";
             const buttons = [];
-            for (let n = 1; n <= 12; n += 1) {
+            for (let n = 1; n <= 11; n += 1) {
               const btn = document.createElement("button");
               btn.type = "button";
               btn.textContent = String(n);
               btn.setAttribute("data-qt-option", String(n));
-              btn.addEventListener("click", () => this_apply(n));
+              btn.addEventListener("click", () => { closeRow(); this_apply(n); });
               buttons.push(btn);
               box.appendChild(btn);
             }
+            // 12번째 칸: 글자 없이 ✏️ 아이콘만. 눌러서 12 이상(1~30)을 직접 입력한다.
+            const pencil = document.createElement("button");
+            pencil.type = "button";
+            pencil.className = "qt-class-pencil";
+            pencil.setAttribute("data-testid", "quiz-class-custom");
+            pencil.setAttribute("aria-label", "반 개수 직접 입력 열기");
+            pencil.setAttribute("aria-expanded", "false");
+            box.appendChild(pencil);
+            const row = document.createElement("div");
+            row.className = "qt-class-row";
+            row.hidden = true;
+            const input = document.createElement("input");
+            input.id = "qtClassCustom";
+            input.type = "text";
+            input.setAttribute("inputmode", "numeric");
+            input.setAttribute("autocomplete", "off");
+            input.setAttribute("placeholder", "1~30");
+            input.setAttribute("aria-label", "반 개수 숫자 입력");
+            input.setAttribute("aria-describedby", "qtClassError");
+            input.setAttribute("data-testid", "quiz-class-input");
+            const ok = document.createElement("button");
+            ok.type = "button";
+            ok.textContent = "확인";
+            ok.setAttribute("data-testid", "quiz-class-ok");
+            row.appendChild(input);
+            row.appendChild(ok);
+            const error = document.createElement("p");
+            error.id = "qtClassError";
+            error.className = "qt-class-error";
+            error.setAttribute("data-testid", "quiz-class-error");
+            error.setAttribute("role", "alert");
+            error.hidden = true;
+            error.textContent = "1~30 사이 정수를 입력해 주세요.";
+            const nextBtn = document.getElementById("qtNext");
+            nextBtn.disabled = false;
+            const parse = () => {
+              const text = input.value.trim();
+              const n = /^[0-9]+$/.test(text) ? Number(text) : NaN;
+              return Number.isInteger(n) && n >= 1 && n <= CLASS_COUNT_LIMIT ? n : NaN;
+            };
+            const refreshNext = () => { nextBtn.disabled = !row.hidden && Number.isNaN(parse()); };
+            const closeRow = () => {
+              row.hidden = true;
+              error.hidden = true;
+              input.removeAttribute("aria-invalid");
+              pencil.setAttribute("aria-expanded", "false");
+              refreshNext();
+            };
+            const showError = () => { error.hidden = false; input.setAttribute("aria-invalid", "true"); error.scrollIntoView({ block: "nearest" }); };
+            const commit = () => {
+              const n = parse();
+              if (Number.isNaN(n)) { showError(); refreshNext(); return false; }
+              closeRow();
+              this_apply(n);
+              return true;
+            };
             const this_apply = (n) => { quizTutorialSteps[0].apply(n); sync(); };
-            const sync = () => buttons.forEach((btn) => btn.setAttribute("aria-pressed", String(Number(btn.textContent) === classCount)));
+            const sync = () => {
+              buttons.forEach((btn) => btn.setAttribute("aria-pressed", String(Number(btn.textContent) === classCount)));
+              const big = classCount >= 12;
+              pencil.setAttribute("aria-pressed", String(big));
+              if (big) pencil.setAttribute("data-qt-value", String(classCount));
+              else pencil.removeAttribute("data-qt-value");
+            };
+            pencil.addEventListener("click", () => {
+              if (row.hidden) {
+                row.hidden = false;
+                input.value = classCount >= 12 ? String(classCount) : "";
+                pencil.setAttribute("aria-expanded", "true");
+                refreshNext();
+                input.focus();
+              } else {
+                closeRow();
+              }
+              repositionQuizBox();
+            });
+            input.addEventListener("input", () => {
+              if (!Number.isNaN(parse()) || input.value.trim() === "") { error.hidden = true; input.removeAttribute("aria-invalid"); }
+              else showError();
+              refreshNext();
+            });
+            input.addEventListener("keydown", (event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              event.stopPropagation();
+              commit();
+            });
+            ok.addEventListener("click", commit);
             body.appendChild(box);
+            body.appendChild(row);
+            body.appendChild(error);
             sync();
             quizTutorialSteps[0].sync = sync;
+            quizTutorialSteps[0].beforeNext = () => (row.hidden ? true : commit());
           },
           apply: (n) => {
+            ensureClassCountOption(n);
             classCountSelect.value = String(n);
             classCountSelect.dispatchEvent(new Event("change", { bubbles: true }));
           }
@@ -5552,6 +5652,8 @@
         tutorialStartBtn.addEventListener("click", endQuizTutorial);
         document.getElementById("qtPrev").addEventListener("click", () => showQuizStep(quizTutorialIndex - 1));
         document.getElementById("qtNext").addEventListener("click", () => {
+          const cur = quizTutorialSteps[quizTutorialIndex];
+          if (cur && cur.beforeNext && !cur.beforeNext()) return;
           if (quizTutorialIndex >= quizTutorialSteps.length - 1) endQuizTutorial();
           else showQuizStep(quizTutorialIndex + 1);
         });
@@ -5592,6 +5694,15 @@
         classCountCustom.setAttribute("aria-invalid", "true");
       }
 
+      function ensureClassCountOption(n) {
+        if (Array.from(classCountSelect.options).some((option) => option.value === String(n))) return;
+        const option = document.createElement("option");
+        option.value = String(n);
+        option.textContent = String(n);
+        const after = Array.from(classCountSelect.options).find((o) => o.value === "custom" || Number(o.value) > n);
+        classCountSelect.insertBefore(option, after || null);
+      }
+
       function applyCustomClassCount() {
         if (classCountCustomRow.hidden) return;
         const text = classCountCustom.value.trim();
@@ -5600,13 +5711,7 @@
           showClassCountError();
           return;
         }
-        if (!Array.from(classCountSelect.options).some((option) => option.value === String(n))) {
-          const option = document.createElement("option");
-          option.value = String(n);
-          option.textContent = String(n);
-          const after = Array.from(classCountSelect.options).find((o) => o.value === "custom" || Number(o.value) > n);
-          classCountSelect.insertBefore(option, after || null);
-        }
+        ensureClassCountOption(n);
         classCountSelect.value = String(n);
         hideClassCountCustom();
         classCount = n;
