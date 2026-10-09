@@ -331,11 +331,67 @@
         display: block;
       }
 
+      .theme-picker.theme-collapsible {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+      }
+
+      .theme-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 44px;
+        padding: 4px 12px;
+        border: 2px solid var(--line);
+        border-radius: 999px;
+        background: var(--card);
+        color: var(--text);
+        font-size: 0.85rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .theme-toggle[aria-expanded="true"] {
+        border-color: var(--text);
+      }
+
+      .theme-current-dot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 1px solid rgba(0, 0, 0, 0.25);
+      }
+
+      .theme-options {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 4px;
+        display: flex;
+        gap: 4px;
+        padding: 6px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--card);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+      }
+
+      .theme-options[hidden] {
+        display: none;
+      }
+
       @media (max-width: 760px) {
         .theme-picker {
-          position: static;
+          position: relative;
+          top: auto;
+          right: auto;
           justify-content: flex-end;
           margin: -8px 0 6px;
+        }
+
+        .theme-options {
+          position: static;
         }
       }
 
@@ -380,6 +436,113 @@
 
       .usage-guide li + li {
         margin-top: 4px;
+      }
+
+      .usage-guide {
+        position: relative;
+        padding-right: 58px;
+      }
+
+      .usage-guide[hidden] {
+        display: none;
+      }
+
+      .usage-close {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        background: var(--card);
+        color: var(--text);
+        font-size: 1rem;
+        font-weight: 800;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      .class-count-field {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+      }
+
+      .class-count-custom-row[hidden],
+      .class-count-error[hidden] {
+        display: none;
+      }
+
+      .control-group .class-count-custom-row input {
+        width: 120px;
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 4px 8px;
+        font-size: 0.9rem;
+        background: var(--card);
+        color: var(--text);
+      }
+
+      .class-count-error,
+      .period-grid-notice {
+        margin: 0;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--danger-text);
+      }
+
+      .period-grid-notice:empty {
+        display: none;
+      }
+
+      .control-group.period-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+      }
+
+      .period-group-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-align: center;
+      }
+
+      .period-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 44px);
+        gap: 3px;
+        justify-content: center;
+      }
+
+      .period-grid-head {
+        text-align: center;
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 2px 0;
+      }
+
+      .period-cell {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--head);
+        color: var(--text);
+        font-size: 0.9rem;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .period-cell[aria-pressed="false"] {
+        background: var(--card);
+        border-style: dashed;
+        color: var(--text);
+        opacity: 0.78;
       }
 
       .controls {
@@ -1123,6 +1286,10 @@
         color: var(--theme-on-main);
       }
 
+      .last-period-config[hidden] {
+        display: none;
+      }
+
       .last-period-config {
         margin-top: 12px;
         border-top: 1px dashed var(--dash);
@@ -1861,8 +2028,13 @@
       .qt-checks { display: flex; flex-wrap: wrap; gap: 6px; }
       .qt-check { display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; min-height: 48px; border: 1px solid var(--line); border-radius: 10px; padding: 0 12px; font-size: 0.88rem; cursor: pointer; }
       .qt-check input { width: 20px; height: 20px; margin: 0; }
-      .qt-rules { margin: 8px 0 0; padding: 0; list-style: none; font-size: 0.8rem; line-height: 1.35; }
-      .qt-rules li { margin-bottom: 4px; }
+      .qt-custom-add { font: inherit; font-size: 0.88rem; font-weight: 400; background: var(--theme-point); border-color: var(--theme-point); color: var(--theme-text); }
+      .qt-step[data-qt-step="specialist"] { display: flex; flex-direction: column; overflow: hidden; }
+      .qt-step[data-qt-step="specialist"] > * { flex: 0 0 auto; }
+      .qt-step[data-qt-step="specialist"] > .qt-checks { flex: 0 1 auto; min-height: 48px; overflow-y: auto; }
+      .qt-doc { margin: 0 0 8px; font-size: 0.8rem; line-height: 1.35; color: var(--theme-text); }
+      .qt-doc-line { margin: 0 0 4px; }
+      .qt-doc-line:first-child { font-weight: 800; }
       .qt-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 10px; }
       .qt-actions .qt-skip { margin-right: auto; }
       .qt-actions button:disabled { opacity: 0.45; cursor: default; }
@@ -1871,13 +2043,14 @@
   </head>
   <body>
     <main class="page">
-      <div class="theme-picker" id="themePicker" role="group" aria-label="색 테마 고르기"></div>
+      <div class="theme-picker theme-collapsible" id="themePicker" role="group" aria-label="색 테마 고르기"></div>
       <h1>학급별 주간 시간표</h1>
       <div class="tutorial-launch">
         <button id="tutorialStartBtn" class="tutorial-start-btn" type="button">사용법 보기</button>
         <button id="quizTutorialStartBtn" class="qt-start-btn" data-testid="quiz-start" type="button">질문으로 설정하기</button>
       </div>
-      <section class="usage-guide" aria-label="사용 방법 안내">
+      <section class="usage-guide" id="usageGuide" aria-label="사용 방법 안내" hidden>
+        <button id="usageCloseBtn" class="usage-close" data-testid="usage-close" type="button" aria-label="사용 방법 접기">✕</button>
         <ol>
           <li>반 개수, 교시 수를 먼저 설정하세요.</li>
           <li>전담 과목 / 담임 과목을 선택하세요. (전담: 여러 교실에 중복되면 안되는 과목)</li>
@@ -1898,12 +2071,19 @@
       <section class="controls" aria-label="표시 설정">
         <div class="control-group">
           <label for="classCountSelect">반 개수</label>
-          <select id="classCountSelect" aria-label="반 개수 선택"></select>
+          <div class="class-count-field">
+            <select id="classCountSelect" aria-label="반 개수 선택"></select>
+            <div class="class-count-custom-row" id="classCountCustomRow" hidden>
+              <input id="classCountCustom" data-testid="class-count-custom" type="text" inputmode="numeric" autocomplete="off" placeholder="1~30" aria-label="반 개수 직접 입력" aria-describedby="classCountError" />
+            </div>
+            <p class="class-count-error" id="classCountError" data-testid="class-count-error" role="alert" hidden>1~30 사이 정수를 입력해 주세요.</p>
+          </div>
         </div>
 
-        <div class="control-group">
-          <label for="periodCountSelect">최대 교시</label>
-          <select id="periodCountSelect" aria-label="최대 교시 선택"></select>
+        <div class="control-group period-group">
+          <span class="period-group-title" id="periodGridTitle">시간표 시간대</span>
+          <div class="period-grid" id="periodGrid" role="group" aria-labelledby="periodGridTitle"></div>
+          <p class="period-grid-notice" id="periodGridNotice" data-testid="pg-notice" role="status"></p>
         </div>
 
         <div class="control-group">
@@ -1959,7 +2139,7 @@
       <div class="auto-dialog" role="dialog" aria-modal="true" aria-label="자동 시간표 생성 설정">
         <h2>자동 시간표 생성 설정</h2>
         <div id="autoGenerateRows"></div>
-        <section class="last-period-config" aria-label="요일별 마지막 교시 사용 여부">
+        <section class="last-period-config" aria-label="요일별 마지막 교시 사용 여부" hidden>
           <h3>요일별 마지막 교시 사용 여부 (클릭 시 X 표시)</h3>
           <table class="last-period-table">
             <thead>
@@ -2041,6 +2221,7 @@
       function applyTheme(themeId, save) {
         const id = Object.prototype.hasOwnProperty.call(THEMES, themeId) ? themeId : DEFAULT_THEME;
         document.documentElement.setAttribute("data-theme", id);
+        updateThemeToggle(id);
         document.querySelectorAll(".theme-btn").forEach((btn) => {
           btn.setAttribute("aria-pressed", btn.dataset.themeId === id ? "true" : "false");
         });
@@ -2053,8 +2234,58 @@
         }
       }
 
+      function themeDotBackground(theme) {
+        return `linear-gradient(90deg, ${theme.main} 50%, ${theme.point} 50%)`;
+      }
+
+      function updateThemeToggle(id) {
+        const toggle = document.getElementById("themeToggle");
+        if (!toggle) return;
+        toggle.setAttribute("aria-label", `테마: ${THEMES[id].label}`);
+        toggle.dataset.themeId = id;
+        const dot = toggle.querySelector(".theme-current-dot");
+        if (dot) dot.style.background = themeDotBackground(THEMES[id]);
+      }
+
+      function setThemeOptionsOpen(open) {
+        const toggle = document.getElementById("themeToggle");
+        const options = document.getElementById("themeOptions");
+        if (!toggle || !options) return;
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        options.hidden = !open;
+      }
+
       function initThemePicker() {
         const picker = document.getElementById("themePicker");
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.id = "themeToggle";
+        toggle.className = "theme-toggle";
+        toggle.setAttribute("data-testid", "theme-toggle");
+        toggle.setAttribute("aria-expanded", "false");
+        toggle.setAttribute("aria-controls", "themeOptions");
+        const toggleDot = document.createElement("span");
+        toggleDot.className = "theme-current-dot";
+        toggleDot.setAttribute("aria-hidden", "true");
+        const toggleText = document.createElement("span");
+        toggleText.setAttribute("aria-hidden", "true");
+        toggleText.textContent = "🎨 테마";
+        toggle.append(toggleText, toggleDot);
+        const options = document.createElement("div");
+        options.id = "themeOptions";
+        options.className = "theme-options";
+        options.hidden = true;
+        picker.append(toggle, options);
+        toggle.addEventListener("click", () => setThemeOptionsOpen(toggle.getAttribute("aria-expanded") !== "true"));
+        document.addEventListener("click", (event) => {
+          if (!picker.contains(event.target)) setThemeOptionsOpen(false);
+        });
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && toggle.getAttribute("aria-expanded") === "true") {
+            setThemeOptionsOpen(false);
+            toggle.focus();
+          }
+        });
         Object.keys(THEMES).forEach((id) => {
           const theme = THEMES[id];
           const btn = document.createElement("button");
@@ -2067,7 +2298,7 @@
           const dot = document.createElement("span");
           dot.className = "theme-dot";
           dot.setAttribute("aria-hidden", "true");
-          dot.style.background = `linear-gradient(90deg, ${theme.main} 50%, ${theme.point} 50%)`;
+          dot.style.background = themeDotBackground(theme);
           const name = document.createElement("span");
           name.className = "theme-name";
           name.textContent = theme.label;
@@ -2076,8 +2307,11 @@
           check.setAttribute("aria-hidden", "true");
           check.textContent = "✓";
           btn.append(dot, name, check);
-          btn.addEventListener("click", () => applyTheme(id, true));
-          picker.appendChild(btn);
+          btn.addEventListener("click", () => {
+            applyTheme(id, true);
+            setThemeOptionsOpen(false);
+          });
+          options.appendChild(btn);
         });
         applyTheme(readSavedTheme(), false);
       }
@@ -2127,7 +2361,6 @@
       const getSubjectFg = (name) => `var(--subj-${getSubjectColorIndex(name)}-fg)`;
 
       const classCountSelect = document.getElementById("classCountSelect");
-      const periodCountSelect = document.getElementById("periodCountSelect");
       const timetableGrid = document.getElementById("timetableGrid");
       const specialistGrid = document.getElementById("specialistGrid");
       const specialistToggle = document.getElementById("specialistToggle");
@@ -2155,6 +2388,11 @@
 
       let classCount = 6;
       let maxPeriodCount = 6;
+      const MAX_PERIOD_LIMIT = 10;
+      const DEFAULT_PERIOD_COUNT = 6;
+      const PERIOD_GRID_KEY = "rsw-period-grid";
+      const CLASS_COUNT_LIMIT = 30;
+      const periodOn = {};
 
       const subjectStore = {};
       const tutorialSteps = [
@@ -2194,7 +2432,7 @@
           description: "자동 생성 버튼을 눌러 시수, 교사, 연차시를 설정한 뒤 시간표를 만드세요."
         },
         {
-          selector: "#autoGenerateModal .last-period-config",
+          selector: "#autoGenerateModal .last-period-config:not([hidden])",
           title: "8. 휴일/마지막 교시 설정",
           description: "요일별 마지막 교시와 휴일을 설정하면 자동 배치에서 제외됩니다."
         }
@@ -2462,7 +2700,111 @@
       }
 
       function isDisabledSlot(day, period) {
-        return holidayDays.has(day) || (period === maxPeriodCount && disabledLastPeriodDays.has(day));
+        return holidayDays.has(day) || !(periodOn[day] && periodOn[day].has(period));
+      }
+
+      function defaultPeriodGrid() {
+        days.forEach((day) => {
+          periodOn[day] = new Set();
+          for (let period = 1; period <= DEFAULT_PERIOD_COUNT; period += 1) periodOn[day].add(period);
+        });
+      }
+
+      function updateMaxPeriodCount() {
+        let max = 1;
+        days.forEach((day) => periodOn[day].forEach((period) => { if (period > max) max = period; }));
+        maxPeriodCount = max;
+      }
+
+      function savePeriodGrid() {
+        try {
+          const data = {};
+          days.forEach((day) => { data[day] = Array.from(periodOn[day]).sort((a, b) => a - b); });
+          localStorage.setItem(PERIOD_GRID_KEY, JSON.stringify(data));
+        } catch (error) {
+          /* 저장 불가 환경에서는 화면만 바꾼다 */
+        }
+      }
+
+      function restorePeriodGrid() {
+        defaultPeriodGrid();
+        try {
+          const raw = localStorage.getItem(PERIOD_GRID_KEY);
+          if (!raw) return;
+          const data = JSON.parse(raw);
+          if (!data || typeof data !== "object" || Array.isArray(data)) return;
+          const next = {};
+          for (const day of days) {
+            const list = data[day];
+            if (!Array.isArray(list) || !list.length) return;
+            const set = new Set();
+            for (const value of list) {
+              if (!Number.isInteger(value) || value < 1 || value > MAX_PERIOD_LIMIT) return;
+              set.add(value);
+            }
+            next[day] = set;
+          }
+          days.forEach((day) => { periodOn[day] = next[day]; });
+        } catch (error) {
+          defaultPeriodGrid();
+        }
+      }
+
+      function clearDisabledPeriodEntries(day, period) {
+        const classes = buildClasses(classCount);
+        for (const className of classes) {
+          delete subjectStore[getCellKey(className, day, period)];
+        }
+      }
+
+      function setPeriodGridNotice(message) {
+        const notice = document.getElementById("periodGridNotice");
+        if (notice) notice.textContent = message;
+      }
+
+      function renderPeriodGrid() {
+        const grid = document.getElementById("periodGrid");
+        grid.innerHTML = "";
+        days.forEach((day) => {
+          const head = document.createElement("div");
+          head.className = "period-grid-head";
+          head.textContent = day;
+          grid.appendChild(head);
+        });
+        for (let period = 1; period <= MAX_PERIOD_LIMIT; period += 1) {
+          days.forEach((day) => {
+            const on = periodOn[day].has(period);
+            const cell = document.createElement("button");
+            cell.type = "button";
+            cell.className = "period-cell";
+            cell.setAttribute("data-testid", `pg-${day}-${period}`);
+            cell.setAttribute("aria-pressed", on ? "true" : "false");
+            cell.setAttribute("aria-label", `${day}요일 ${period}교시`);
+            cell.textContent = on ? String(period) : "✕";
+            cell.addEventListener("click", () => togglePeriodCell(day, period, cell));
+            grid.appendChild(cell);
+          });
+        }
+      }
+
+      function togglePeriodCell(day, period, cell) {
+        if (periodOn[day].has(period)) {
+          if (periodOn[day].size <= 1) {
+            setPeriodGridNotice(`${day}요일은 교시가 1칸 이상 있어야 해요.`);
+            return;
+          }
+          periodOn[day].delete(period);
+          clearDisabledPeriodEntries(day, period);
+        } else {
+          periodOn[day].add(period);
+        }
+        setPeriodGridNotice("");
+        const on = periodOn[day].has(period);
+        cell.setAttribute("aria-pressed", on ? "true" : "false");
+        cell.textContent = on ? String(period) : "✕";
+        updateMaxPeriodCount();
+        savePeriodGrid();
+        renderTimetables();
       }
 
       function clearDisabledLastPeriodEntriesForDay(day) {
@@ -4283,6 +4625,40 @@
         renderSpecialistTimetables();
         renderSpecialistOptions(subjectOptions, selectedSpecialists, selectedHomerooms);
         renderSpecialistOptions(homeroomOptions, selectedHomerooms, selectedSpecialists);
+        return normalized;
+      }
+
+      const CUSTOM_SPECIALISTS_KEY = "rsw-custom-specialists";
+
+      function readCustomSpecialistNames() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(CUSTOM_SPECIALISTS_KEY));
+          if (!Array.isArray(parsed)) return [];
+          const names = [];
+          parsed.forEach((item) => {
+            const name = typeof item === "string" ? item.trim() : "";
+            if (name && name !== PE_SUBJECT && !names.includes(name)) names.push(name);
+          });
+          return names;
+        } catch (error) {
+          return [];
+        }
+      }
+
+      async function addCustomSpecialistFromQuiz() {
+        const before = specialistSubjects.map((item) => item.name);
+        const name = await handleAddCustomSubject("specialist");
+        if (!name || before.includes(name)) return;
+        const names = readCustomSpecialistNames();
+        if (!names.includes(name)) names.push(name);
+        try { localStorage.setItem(CUSTOM_SPECIALISTS_KEY, JSON.stringify(names)); } catch (error) { /* 저장 실패는 무시 */ }
+      }
+
+      function restoreCustomSpecialists() {
+        readCustomSpecialistNames().forEach((name) => {
+          const normalized = registerCustomSubject(name);
+          if (normalized) selectedSpecialists.add(normalized);
+        });
       }
 
       function setupSpecialistDropdown() {
@@ -4422,13 +4798,19 @@
         endTutorial();
       }
 
-      function endTutorial() {
+      function endTutorial(skipScroll) {
+        const wasActive = document.body.classList.contains("tutorial-active");
         document.removeEventListener("keydown", handleTutorialEscape);
         removeTutorialDom();
         closeTutorialOwnedModal();
         stopTutorialTooltipDrag();
         window.removeEventListener("resize", repositionTutorialTooltip);
         window.removeEventListener("scroll", repositionTutorialTooltip, true);
+        // 끝나면 '사용법 보기' 버튼과 열려 있는 설명문이 보이게 맨 위로 돌아온다(X 로 접어 둔 때는 안 움직임).
+        const guide = document.getElementById("usageGuide");
+        if (wasActive && skipScroll !== true && guide && !guide.hidden) {
+          window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+        }
       }
 
       function ensureTutorialDom() {
@@ -4647,8 +5029,14 @@
         window.setTimeout(() => positionTutorialTooltip(targetElement), 60);
       }
 
+      function showUsageGuide() {
+        const guide = document.getElementById("usageGuide");
+        if (guide) guide.hidden = false;
+      }
+
       function startTutorial() {
-        endTutorial();
+        showUsageGuide();
+        endTutorial(true);
         currentTutorialIndex = 0;
         document.body.classList.add("tutorial-active");
         document.addEventListener("keydown", handleTutorialEscape);
@@ -4658,6 +5046,12 @@
       }
 
       function setupTutorial() {
+        const usageCloseBtn = document.getElementById("usageCloseBtn");
+        if (usageCloseBtn) {
+          usageCloseBtn.addEventListener("click", () => {
+            document.getElementById("usageGuide").hidden = true;
+          });
+        }
         if (!tutorialStartBtn) return;
         tutorialStartBtn.addEventListener("click", startTutorial);
       }
@@ -4697,34 +5091,26 @@
           key: "specialist",
           title: "전담 과목",
           question: "전담 선생님이 가르치는 과목을 고르세요. (체육은 자동 포함)",
-          hint: "강조된 '전담 과목' 버튼을 누르면 같은 목록이 열려요. 아래 세 가지 중복 방지는 항상 켜져 있어요.",
+          hint: "",
           target: () => specialistToggle.closest(".control-group"),
           menu: () => specialistMenu,
           render: (body) => {
-            renderQuizSubjectChecks(body, subjectOptions, quizTutorialSteps[1]);
-            const rules = document.createElement("ul");
-            rules.className = "qt-rules";
-            [
-              ["subject", "과목 중복 ×", "같은 시간에 같은 전담 과목이 두 반에 겹치지 않아요."],
-              ["teacher", "강사 중복 ×", "같은 담당 교사가 같은 시간에 두 반을 맡지 않아요."],
-              ["space", "공간 중복 ×", "체육 강당·운동장 같은 장소는 같은 시간에 한 반만 써요."]
-            ].forEach(([id, name, text]) => {
-              const li = document.createElement("li");
-              const label = document.createElement("label");
-              const input = document.createElement("input");
-              input.type = "checkbox";
-              input.checked = true;
-              input.disabled = true;
-              input.setAttribute("data-qt-rule", id);
-              const strong = document.createElement("strong");
-              strong.textContent = " " + name + " ";
-              label.append(input, strong, document.createTextNode(text));
-              li.appendChild(label);
-              rules.appendChild(li);
-            });
-            // 규칙 목록은 다음 작업에서 붙여 첫 배치 비용을 나눈다(안내 문장보다 앞에 둠).
+            // 칩과 설명 4줄은 첫 배치 비용을 나누려고 각각 다음 작업에서 붙인다(설명이 칩보다 위).
             window.requestAnimationFrame(() => window.setTimeout(() => {
-              if (body.isConnected && quizTutorialIndex === 1) body.insertBefore(rules, body.querySelector(".qt-hint"));
+              if (body.isConnected && quizTutorialIndex === 1) renderQuizSubjectChecks(body, subjectOptions, quizTutorialSteps[1]);
+            }, 0));
+            const doc = document.createElement("div");
+            doc.className = "qt-doc";
+            doc.setAttribute("data-qt-doc", "");
+            ["전담 과목이란?", "전담 과목은 선생님이 여러 반을 맡는 과목이에요.", "교사 중복 ×: 같은 시간에 선생님 한 명이 두 반에 들어갈 수 없어요.", "공간 중복 ×: 체육처럼 강당·운동장을 쓰는 과목은 같은 시간에 한 반만 써요."].forEach((text) => {
+              const line = document.createElement("p");
+              line.className = "qt-doc-line";
+              line.setAttribute("data-qt-doc-line", "");
+              line.textContent = text;
+              doc.appendChild(line);
+            });
+            window.requestAnimationFrame(() => window.setTimeout(() => {
+              if (body.isConnected && quizTutorialIndex === 1) body.insertBefore(doc, body.firstElementChild.nextSibling);
             }, 0));
           },
           apply: (name) => quizToggleRealSubject(subjectOptions, name)
@@ -4783,27 +5169,46 @@
       }
 
       function renderQuizSubjectChecks(body, container, step) {
-        const box = document.createElement("div");
-        box.className = "qt-checks";
-        const inputs = Array.from(container.querySelectorAll("input[type=checkbox]")).map((real) => {
-          const label = document.createElement("label");
-          label.className = "qt-check";
-          const input = document.createElement("input");
-          input.type = "checkbox";
-          input.value = real.value;
-          input.setAttribute("data-qt-subject", real.value);
-          input.addEventListener("change", () => { step.apply(real.value); closeQuizMenus(); sync(); });
-          label.append(input, document.createTextNode(real.value));
-          box.appendChild(label);
-          return input;
-        });
-        const sync = () => inputs.forEach((input) => {
-          const real = Array.from(container.querySelectorAll("input[type=checkbox]")).find((item) => item.value === input.value);
-          input.checked = !!(real && real.checked);
-        });
-        body.appendChild(box);
-        sync();
-        step.sync = sync;
+        const makeBox = () => {
+          const box = document.createElement("div");
+          box.className = "qt-checks";
+          const inputs = Array.from(container.querySelectorAll("input[type=checkbox]")).map((real) => {
+            const label = document.createElement("label");
+            label.className = "qt-check";
+            const input = document.createElement("input");
+            input.type = "checkbox";
+            input.value = real.value;
+            input.setAttribute("data-qt-subject", real.value);
+            input.addEventListener("change", () => { step.apply(real.value); closeQuizMenus(); sync(); });
+            label.append(input, document.createTextNode(real.value));
+            box.appendChild(label);
+            return input;
+          });
+          const sync = () => inputs.forEach((input) => {
+            const real = Array.from(container.querySelectorAll("input[type=checkbox]")).find((item) => item.value === input.value);
+            input.checked = !!(real && real.checked);
+          });
+          if (step.key === "specialist") {
+            const add = document.createElement("button");
+            add.type = "button";
+            add.className = "qt-check qt-custom-add";
+            add.setAttribute("data-testid", "quiz-custom-add");
+            add.textContent = "\u270F\uFE0F 직접 추가";
+            add.addEventListener("click", async () => {
+              await addCustomSpecialistFromQuiz();
+              if (!box.isConnected) return;
+              const fresh = makeBox();
+              box.replaceWith(fresh);
+              const freshAdd = fresh.querySelector("[data-testid=quiz-custom-add]");
+              if (freshAdd) freshAdd.focus({ preventScroll: true });
+            });
+            box.insertBefore(add, box.firstChild);
+          }
+          step.sync = sync;
+          sync();
+          return box;
+        };
+        body.appendChild(makeBox());
       }
 
       function closeQuizMenus() {
@@ -4819,7 +5224,9 @@
       }
 
       function clearQuizHighlight() {
-        document.querySelectorAll(".qt-highlight").forEach((element) => element.classList.remove("qt-highlight"));
+        document.querySelectorAll(".qt-highlight").forEach((element) => element.classList.remove("qt-highlight"));
+        specialistMenu.style.maxHeight = "";
+        homeroomMenu.style.maxHeight = "";
       }
 
       function closeQuizOwnedModal() {
@@ -4929,6 +5336,19 @@
       }
 
       // 대상 사각형(target)과, 대상+지금 열려 있는 메뉴를 묶은 사각형(box). 메뉴가 열리면 상자가 비켜 선다.
+      function quizPhoneMenuStep() {
+        const step = quizTutorialSteps[quizTutorialIndex];
+        return step && step.menu && window.innerWidth < 700 ? step : null;
+      }
+
+      // 폰 목록 단계에서는 목록이 화면 아래를 넘지 않게 높이를 제한한다(끝나면 clearQuizHighlight 가 되돌림).
+      function quizLimitPhoneMenus(step, tr, vh) {
+        [specialistMenu, homeroomMenu].forEach((menu) => { menu.style.maxHeight = ""; });
+        if (!step) return;
+        const menu = step.menu();
+        if (menu) menu.style.maxHeight = Math.min(260, Math.max(120, vh - 8 - (tr.bottom + 6))) + "px";
+      }
+
       function quizMeasureBox(target) {
         const hole = target.getBoundingClientRect();
         const box = { left: hole.left, top: hole.top, right: hole.right, bottom: hole.bottom };
@@ -4972,6 +5392,10 @@
         ];
         let best = null;
         cands.forEach((c) => { if (c.fit && (!best || c.dist < best.dist - 0.5)) best = c; });
+        // 폰의 목록 단계: 목록이 대상 아래로 펼쳐지므로 카드는 닫힘·열림 모두 대상 위에 둔다(열고 닫을 때 카드가 안 뛴다).
+        const phoneStep = quizPhoneMenuStep();
+        quizLimitPhoneMenus(phoneStep, tr, vh);
+        if (phoneStep && cands[1].fit) best = cands[1];
         if (!best) {
           // 어느 쪽에도 안 들어가면 더 넓은 쪽(위/아래)에 높이를 줄이고 카드 안 스크롤로 둔다.
           const roomBelow = vh - gap - (hole.bottom + arrowLen);
@@ -5019,6 +5443,15 @@
 
       // 대상(+메뉴)이 화면 밖이면 부드럽게 스크롤한다. 스크롤했으면 true.
       function quizScrollToTarget(target, step) {
+        const phoneStep = quizPhoneMenuStep();
+        if (phoneStep) {
+          // 카드가 대상 위에 들어갈 높이만큼 대상을 아래로 내려 둔다.
+          const want = quizTutorialBox.offsetHeight + 32;
+          const delta = target.getBoundingClientRect().top - want;
+          if (Math.abs(delta) <= 2) return false;
+          window.scrollBy({ top: delta, behavior: quizReducedMotion() ? "auto" : "smooth" });
+          return true;
+        }
         const b = quizMeasureBox(target).box;
         if (b.top >= 8 && b.bottom <= window.innerHeight - 8) return false;
         target.scrollIntoView({ behavior: quizReducedMotion() ? "auto" : "smooth", block: step.needsAutoModal ? "center" : "start", inline: "nearest" });
@@ -5090,23 +5523,26 @@
         window.requestAnimationFrame(() => window.setTimeout(() => {
           if (quizTutorialIndex !== index) return;
           // 안내 문장은 다음 작업에서 붙여 첫 배치 비용을 나눈다.
-          const hint = document.createElement("p");
-          hint.className = "qt-hint";
-          hint.textContent = step.hint;
-          stepEl.appendChild(hint);
+          if (step.hint) {
+            const hint = document.createElement("p");
+            hint.className = "qt-hint";
+            hint.textContent = step.hint;
+            stepEl.appendChild(hint);
+          }
           const target = step.target();
           let scrolling = false;
           if (target) {
             target.classList.add("qt-highlight");
             scrolling = quizScrollToTarget(target, step);
           }
-          positionQuizBox(target, !scrolling);
+          positionQuizBox(target, !scrolling || !!quizPhoneMenuStep());
         }, 0));
         window.setTimeout(repositionQuizBox, 120);
       }
 
       function handleQuizEscape(event) {
         if (event.key !== "Escape") return;
+        if (document.querySelector(".text-input-modal")) return;
         if (closeQuizMenus()) {
           event.stopPropagation();
           return;
@@ -5165,17 +5601,72 @@
       }
 
       fillSelectOptions(classCountSelect, 1, 12, classCount);
-      fillSelectOptions(periodCountSelect, 1, 9, maxPeriodCount);
+      {
+        const customOption = document.createElement("option");
+        customOption.value = "custom";
+        customOption.textContent = "직접 입력";
+        classCountSelect.appendChild(customOption);
+      }
+
+      const classCountCustom = document.getElementById("classCountCustom");
+      const classCountCustomRow = document.getElementById("classCountCustomRow");
+      const classCountError = document.getElementById("classCountError");
+
+      function hideClassCountCustom() {
+        classCountCustomRow.hidden = true;
+        classCountError.hidden = true;
+        classCountCustom.removeAttribute("aria-invalid");
+        classCountCustom.value = "";
+      }
+
+      function showClassCountError() {
+        classCountError.hidden = false;
+        classCountCustom.setAttribute("aria-invalid", "true");
+      }
+
+      function applyCustomClassCount() {
+        if (classCountCustomRow.hidden) return;
+        const text = classCountCustom.value.trim();
+        const n = /^[0-9]+$/.test(text) ? Number(text) : NaN;
+        if (!Number.isInteger(n) || n < 1 || n > CLASS_COUNT_LIMIT) {
+          showClassCountError();
+          return;
+        }
+        if (!Array.from(classCountSelect.options).some((option) => option.value === String(n))) {
+          const option = document.createElement("option");
+          option.value = String(n);
+          option.textContent = String(n);
+          const after = Array.from(classCountSelect.options).find((o) => o.value === "custom" || Number(o.value) > n);
+          classCountSelect.insertBefore(option, after || null);
+        }
+        classCountSelect.value = String(n);
+        hideClassCountCustom();
+        classCount = n;
+        renderTimetables();
+      }
 
       classCountSelect.addEventListener("change", (event) => {
+        if (event.target.value === "custom") {
+          classCountCustomRow.hidden = false;
+          classCountCustom.focus();
+          return;
+        }
+        hideClassCountCustom();
         classCount = Number(event.target.value);
         renderTimetables();
       });
 
-      periodCountSelect.addEventListener("change", (event) => {
-        maxPeriodCount = Number(event.target.value);
-        renderTimetables();
+      classCountCustom.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          applyCustomClassCount();
+        }
       });
+      classCountCustom.addEventListener("change", applyCustomClassCount);
+
+      restorePeriodGrid();
+      updateMaxPeriodCount();
+      renderPeriodGrid();
 
       setupSpecialistDropdown();
       setupPePicker();
@@ -5184,6 +5675,7 @@
       setupTutorial();
       setupSpecialistCellMenuClose();
       selectedSpecialists.add(PE_SUBJECT);
+      restoreCustomSpecialists();
       renderSpecialistOptions(subjectOptions, selectedSpecialists, selectedHomerooms);
       renderSpecialistOptions(homeroomOptions, selectedHomerooms, selectedSpecialists);
       renderTimetables();
