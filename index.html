@@ -1553,6 +1553,56 @@
         opacity: 0.35;
       }
 
+      /* 야간3 C: 체육 전담 칸 메뉴 버튼 3개 디자인(CSS 만. 가능=옅은 테마색+실선, 불가=카드색+점선, 직접 입력=점선+진한 글자). 이 블록이 앞 중복보다 뒤라 이긴다. */
+      .pe-quick-menu {
+        gap: 8px;
+        padding: 4px;
+        min-width: 186px;
+      }
+
+      .pe-quick-menu > .pe-quick-btn {
+        min-width: 52px;
+        min-height: 44px;
+        padding: 6px 0;
+        border: 1.5px solid var(--theme-main-strong);
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--theme-main) 22%, var(--theme-card));
+        color: var(--theme-text);
+        font-size: 0.72rem;
+        font-weight: 800;
+        word-break: keep-all;
+        overflow-wrap: break-word;
+        transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
+      }
+
+      .pe-quick-menu > .pe-quick-btn.inactive {
+        border: 1.5px dashed var(--theme-line);
+        background: var(--theme-card);
+        color: var(--theme-text);
+        opacity: 1;
+      }
+
+      .pe-quick-menu > .pe-quick-btn.other:last-child {
+        border: 1.5px dashed var(--theme-main-strong);
+        background: var(--theme-card);
+        color: var(--theme-main-strong);
+      }
+
+      .pe-quick-menu > .pe-quick-btn:active {
+        transform: scale(0.95);
+      }
+
+      .pe-quick-menu > .pe-quick-btn:focus-visible {
+        outline: 2px solid var(--theme-main-strong);
+        outline-offset: 2px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .pe-quick-menu > .pe-quick-btn {
+          transition: opacity 0.2s ease, background-color 0.2s ease;
+        }
+      }
+
       .class-select-section-title {
         padding: 6px 8px;
         font-size: 0.75rem;
