@@ -2,7 +2,7 @@
 <html lang="ko" data-theme="crayon">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>학급별 주간 시간표</title>
     <style>
       :root {
@@ -2472,9 +2472,101 @@
       .qt-actions .qt-skip { margin-right: auto; }
       .qt-actions button:disabled { opacity: 0.45; cursor: default; }
       .qt-actions .primary { background: var(--theme-main-strong); border-color: var(--theme-main); color: var(--theme-on-main); }
+
+      /* 하단 네비게이션 바(탭 2개)와 탭 패널. 색은 테마 변수만. 쉬는 상태의 패널은 transform/opacity 를 건드리지 않는다. */
+      .tab-panel {
+        padding-bottom: calc(64px + env(safe-area-inset-bottom));
+      }
+
+      .tab-panel[hidden] {
+        display: none;
+      }
+
+      .tab-panel.tab-in {
+        animation: tabPanelIn 0.25s ease both;
+      }
+
+      @keyframes tabPanelIn {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: none; }
+      }
+
+      @keyframes tabPanelFade {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      .bottom-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 80;
+        display: flex;
+        gap: 6px;
+        box-sizing: border-box;
+        padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--theme-line);
+        border-radius: 16px 16px 0 0;
+        background: color-mix(in srgb, var(--theme-main) 9%, var(--theme-card));
+        box-shadow: 0 -2px 12px color-mix(in srgb, var(--theme-text) 8%, transparent);
+        transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
+      }
+
+      .bottom-nav-tab {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-height: 44px;
+        padding: 2px 4px;
+        border: 0;
+        border-radius: 12px;
+        background: transparent;
+        color: var(--theme-muted);
+        font-size: 0.75rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: color 0.3s ease, background-color 0.3s ease;
+      }
+
+      .bottom-nav-tab svg {
+        fill: none;
+        transition: fill 0.3s ease;
+      }
+
+      .bottom-nav-tab[aria-selected="true"] {
+        color: var(--theme-main-strong);
+        background: var(--theme-card);
+        box-shadow: inset 0 0 0 1.5px var(--theme-main);
+      }
+
+      .bottom-nav-tab[aria-selected="true"] svg {
+        fill: currentColor;
+      }
+
+      .bottom-nav-tab:focus-visible {
+        outline: 2px solid var(--theme-main-strong);
+        outline-offset: -2px;
+      }
+
+      /* 사용법 보기·질문으로 설정하기 진행 중에는 바를 숨겨 구멍 대상과 겹치지 않게 한다. */
+      body.tutorial-active .bottom-nav,
+      body:has(#quizTutorial:not([hidden])) .bottom-nav {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .tab-panel.tab-in { animation: tabPanelFade 0.01s linear both; }
+        .bottom-nav, .bottom-nav-tab, .bottom-nav-tab svg { transition-duration: 0.01s; }
+      }
     </style>
   </head>
   <body>
+    <div id="tabPanelTimetable" class="tab-panel" role="tabpanel" aria-labelledby="tabTimetableBtn">
     <main class="page">
       <div class="theme-picker theme-collapsible" id="themePicker" role="group" aria-label="색 테마 고르기"></div>
       <h1>학급별 주간 시간표</h1>
@@ -2557,6 +2649,19 @@
 
       <section id="timetableGrid" class="timetable-grid" aria-label="시간표"></section>
     </main>
+    </div>
+    <div id="tabPanelCalendar" class="tab-panel" role="tabpanel" aria-labelledby="tabCalendarBtn" hidden></div>
+
+    <nav id="bottomNav" class="bottom-nav" role="tablist" aria-label="화면 이동">
+      <button id="tabTimetableBtn" class="bottom-nav-tab" type="button" role="tab" data-testid="tab-timetable" aria-selected="true" aria-controls="tabPanelTimetable">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="M3 10h18M9 10v10" fill="none"></path></svg>
+        <span>시간표</span>
+      </button>
+      <button id="tabCalendarBtn" class="bottom-nav-tab" type="button" role="tab" data-testid="tab-calendar" aria-selected="false" aria-controls="tabPanelCalendar" tabindex="-1">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M3 10h18M8 3v4M16 3v4" fill="none" stroke-linecap="round"></path></svg>
+        <span>캘린더</span>
+      </button>
+    </nav>
 
     <div id="pePickerModal" class="pe-picker-modal" aria-hidden="true">
       <div class="pe-picker-dialog" role="dialog" aria-modal="true" aria-label="체육 장소 선택">
@@ -6815,6 +6920,50 @@
       renderSpecialistOptions(subjectOptions, selectedSpecialists, selectedHomerooms);
       renderSpecialistOptions(homeroomOptions, selectedHomerooms, selectedSpecialists);
       renderTimetables();
+
+      // 하단 탭 바: 시간표 / 캘린더 패널 전환. 첫 화면은 항상 시간표(저장 안 함).
+      function setupBottomNav() {
+        const tabs = {
+          timetable: { btn: document.getElementById("tabTimetableBtn"), panel: document.getElementById("tabPanelTimetable") },
+          calendar: { btn: document.getElementById("tabCalendarBtn"), panel: document.getElementById("tabPanelCalendar") }
+        };
+        let current = "timetable";
+        let savedScrollY = 0;
+        let enterTimer = 0;
+        const select = (name) => {
+          if (name === current) return;
+          // 사용법 보기·질문으로 설정하기 진행 중에는 전환하지 않는다.
+          if (quizTutorialIndex >= 0 || document.body.classList.contains("tutorial-active")) return;
+          window.clearTimeout(enterTimer);
+          if (current === "timetable") savedScrollY = window.scrollY;
+          const prev = tabs[current];
+          const next = tabs[name];
+          prev.panel.hidden = true;
+          prev.panel.classList.remove("tab-in");
+          prev.btn.setAttribute("aria-selected", "false");
+          prev.btn.tabIndex = -1;
+          next.panel.hidden = false;
+          next.btn.setAttribute("aria-selected", "true");
+          next.btn.tabIndex = 0;
+          current = name;
+          window.scrollTo({ top: name === "timetable" ? savedScrollY : 0, behavior: "auto" });
+          next.panel.classList.remove("tab-in");
+          void next.panel.offsetWidth;
+          next.panel.classList.add("tab-in");
+          enterTimer = window.setTimeout(() => next.panel.classList.remove("tab-in"), 320);
+        };
+        Object.keys(tabs).forEach((name) => {
+          tabs[name].btn.addEventListener("click", () => select(name));
+          tabs[name].btn.addEventListener("keydown", (event) => {
+            if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+            event.preventDefault();
+            const other = name === "timetable" ? "calendar" : "timetable";
+            select(other);
+            tabs[other].btn.focus();
+          });
+        });
+      }
+      setupBottomNav();
       </script>
   </body>
 </html>
