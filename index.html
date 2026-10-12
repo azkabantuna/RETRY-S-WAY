@@ -2568,6 +2568,8 @@
       let tutorialElevatedElement = null;
       let tutorialOpenedAutoModal = false;
       let tutorialTooltipDragged = false;
+      let tutorialScrolling = false;
+      let tutorialPlaceToken = 0;
       let tutorialTooltipDragState = null;
       const selectedSpecialists = new Set();
       const selectedHomerooms = new Set();
@@ -5072,6 +5074,8 @@
         document.body.classList.remove("tutorial-active");
         tutorialTooltipDragged = false;
         tutorialTooltipDragState = null;
+        tutorialScrolling = false;
+        tutorialPlaceToken += 1;
         if (tutorialOverlay) {
           tutorialOverlay.remove();
           tutorialOverlay = null;
@@ -5138,51 +5142,119 @@
         }
       }
 
+      // 자리 계산(순수 함수): 팝업이 대상(avoid)과 안 겹치는 위치를 고른다. 위치만 돌려주고 DOM 은 안 건드린다(움직임 효과는 호출하는 쪽).
+      // 후보 순서 아래→위→오른쪽→왼쪽, 막는 메뉴와도 안 겹치는 것 우선, 전부 겹치면 대상과 가장 덜 겹치는 것. 큰 대상은 화면 아래 가장자리에 붙인다.
+      function computeTutorialTooltipPlacement(avoid, size, blocks, viewW, viewH, tall) {
+        const margin = 12;
+        const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
+        const fit = (left, top) => ({ left: clamp(left, margin, viewW - size.width - margin), top: clamp(top, margin, viewH - size.height - margin) });
+        const area = (candidate, rect, pad) => {
+          const w = Math.min(candidate.left + size.width, rect.right + pad) - Math.max(candidate.left, rect.left - pad);
+          const h = Math.min(candidate.top + size.height, rect.bottom + pad) - Math.max(candidate.top, rect.top - pad);
+          return w > 0 && h > 0 ? w * h : 0;
+        };
+        const candidates = [
+          fit(avoid.left, avoid.bottom + margin),
+          fit(avoid.left, avoid.top - size.height - margin),
+          fit(avoid.right + margin, avoid.top),
+          fit(avoid.left - size.width - margin, avoid.top)
+        ].map((candidate) => ({
+          left: candidate.left,
+          top: candidate.top,
+          cover: area(candidate, avoid, 0),
+          blocked: blocks.reduce((sum, block) => sum + area(candidate, block, margin), 0)
+        }));
+        const clean = candidates.find((candidate) => candidate.cover === 0 && candidate.blocked === 0);
+        if (clean) return clean;
+        const free = candidates.find((candidate) => candidate.cover === 0);
+        if (free) return free;
+        // 대상이 화면에 비해 커서 어느 쪽에도 안 들어가면: 대상 위쪽(스크롤로 맞춘 부분)은 비우고 팝업을 화면 아래 가장자리에 붙인다.
+        if (tall) return fit(avoid.left, viewH);
+        return candidates.reduce((best, candidate) => (candidate.cover < best.cover ? candidate : best), candidates[0]);
+      }
+
+      // 이 단계의 모든 대상(1단계는 카드 두 개)을 합친 사각형.
+      function getTutorialAvoidRect(targetElement) {
+        const step = tutorialSteps[currentTutorialIndex];
+        const list = step && step.selector ? Array.from(document.querySelectorAll(step.selector)) : [];
+        if (!list.includes(targetElement)) list.push(targetElement);
+        const rects = list.map((element) => element.getBoundingClientRect());
+        return {
+          left: Math.min(...rects.map((r) => r.left)),
+          top: Math.min(...rects.map((r) => r.top)),
+          right: Math.max(...rects.map((r) => r.right)),
+          bottom: Math.max(...rects.map((r) => r.bottom))
+        };
+      }
+
+      function isTutorialTargetTall(rect) {
+        const tipHeight = tutorialTooltip ? tutorialTooltip.getBoundingClientRect().height : 160;
+        return (rect.bottom - rect.top) + 12 * 2 + tipHeight > window.innerHeight;
+      }
+
       function positionTutorialTooltip(targetElement) {
         if (!tutorialTooltip || !targetElement || tutorialTooltipDragged) return;
-        const rect = targetElement.getBoundingClientRect();
+        const avoid = getTutorialAvoidRect(targetElement);
         const tooltipRect = tutorialTooltip.getBoundingClientRect();
-        const margin = 12;
-        const blockingRects = Array.from(
+        const blocks = Array.from(
           document.querySelectorAll(".specialist-menu.open, .class-select-menu, .teacher-menu.open, .pe-quick-menu, .pe-picker-modal.open")
         ).map((element) => element.getBoundingClientRect());
-        const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-        const overlaps = (candidate) =>
-          blockingRects.some(
-            (block) =>
-              candidate.left < block.right + margin &&
-              candidate.right > block.left - margin &&
-              candidate.top < block.bottom + margin &&
-              candidate.bottom > block.top - margin
-          );
-        const candidates = [
-          { left: rect.right + margin, top: rect.top },
-          { left: rect.left - tooltipRect.width - margin, top: rect.top },
-          { left: rect.left, top: rect.bottom + margin },
-          { left: rect.left, top: rect.top - tooltipRect.height - margin }
-        ].map((candidate) => ({
-          left: clamp(candidate.left, margin, window.innerWidth - tooltipRect.width - margin),
-          top: clamp(candidate.top, margin, window.innerHeight - tooltipRect.height - margin)
-        }));
-        const best =
-          candidates.find(
-            (candidate) =>
-              !overlaps({
-                left: candidate.left,
-                right: candidate.left + tooltipRect.width,
-                top: candidate.top,
-                bottom: candidate.top + tooltipRect.height
-              })
-          ) || candidates[0];
-
+        const best = computeTutorialTooltipPlacement(avoid, { width: tooltipRect.width, height: tooltipRect.height }, blocks, window.innerWidth, window.innerHeight, isTutorialTargetTall(avoid));
         tutorialTooltip.style.left = `${best.left}px`;
         tutorialTooltip.style.top = `${best.top}px`;
+      }
+
+      // 대상이 화면 밖이면 먼저 스크롤하고, 스크롤이 멈춘 뒤(같은 위치 3프레임, 최대 600ms) 팝업 자리를 계산한다. 이미 보이면 스크롤 없이 바로 계산.
+      function scrollTutorialTargetThenPlace(targetElement) {
+        tutorialPlaceToken += 1;
+        const token = tutorialPlaceToken;
+        const rect = getTutorialAvoidRect(targetElement);
+        const tall = isTutorialTargetTall(rect);
+        const tipH = tutorialTooltip ? tutorialTooltip.getBoundingClientRect().height : 160;
+        const vh = window.innerHeight;
+        const roomBelow = rect.bottom <= vh - tipH - 24;
+        const roomAbove = rect.top >= tipH + 24;
+        const needScroll = tall ? rect.top < 0 || rect.top > 80 : rect.top < 0 || rect.bottom > vh || (!roomAbove && !roomBelow);
+        // 중간 크기 대상: 가운데 정렬로는 위·아래에 팝업 자리가 없으면, 대상 아래끝이 팝업 바로 위에 오게 스크롤한다.
+        const h = rect.bottom - rect.top;
+        const bottomAlign = !tall && h + tipH + 24 > vh / 2 + h / 2;
+        tutorialScrolling = false;
+        if (!needScroll) {
+          positionTutorialTooltip(targetElement);
+          return;
+        }
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const behavior = reduced ? "auto" : "smooth";
+        if (tall) window.scrollBy({ top: rect.top - 16, behavior });
+        else if (bottomAlign) window.scrollBy({ top: rect.bottom - (vh - tipH - 24), behavior });
+        else targetElement.scrollIntoView({ behavior, block: "center" });
+        if (reduced) {
+          positionTutorialTooltip(targetElement);
+          return;
+        }
+        tutorialScrolling = true;
+        const started = performance.now();
+        let last = null;
+        let same = 0;
+        const watch = () => {
+          if (token !== tutorialPlaceToken || !tutorialTooltip) return;
+          const top = targetElement.getBoundingClientRect().top;
+          same = last !== null && Math.abs(top - last) < 0.5 ? same + 1 : 0;
+          last = top;
+          if (same >= 3 || performance.now() - started >= 600) {
+            tutorialScrolling = false;
+            positionTutorialTooltip(targetElement);
+            return;
+          }
+          window.requestAnimationFrame(watch);
+        };
+        window.requestAnimationFrame(watch);
       }
 
       function repositionTutorialTooltip() {
         if (!tutorialTooltip || !tutorialHighlightedElement) return;
         window.setTimeout(() => {
-          if (tutorialTooltip && tutorialHighlightedElement) {
+          if (tutorialTooltip && tutorialHighlightedElement && !tutorialScrolling) {
             positionTutorialTooltip(tutorialHighlightedElement);
           }
         }, 80);
@@ -5258,8 +5330,7 @@
           tutorialElevatedElement.classList.add("tutorial-elevated");
         }
         renderTutorialTooltip(step, index);
-        targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
-        window.setTimeout(() => positionTutorialTooltip(targetElement), 360);
+        scrollTutorialTargetThenPlace(targetElement);
       }
 
       function clampTutorialTooltipPosition(left, top) {
