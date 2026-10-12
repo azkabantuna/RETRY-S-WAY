@@ -2255,6 +2255,69 @@
         background: var(--theme-main-strong);
         color: var(--theme-on-main);
       }
+
+      /* 야간3 D: 반별 칸 입력창 아래 과목 칩(칩이 있을 때만 창 높이를 화면 안으로 제한) */
+      .text-input-dialog:has(.cell-chip-area) {
+        max-height: calc(100dvh - 32px);
+        overflow-y: auto;
+        box-sizing: border-box;
+      }
+
+      .cell-chip-area {
+        margin-top: 10px;
+        max-height: min(40vh, 260px);
+        overflow-y: auto;
+        animation: cellChipIn 0.2s ease both;
+      }
+
+      @keyframes cellChipIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: none; }
+      }
+
+      .cell-chip-title {
+        margin: 6px 0 4px;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .cell-chip-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+        gap: 6px;
+      }
+
+      .cell-chip {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        box-sizing: border-box;
+        padding: 4px 8px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        text-align: center;
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
+      }
+
+      .cell-chip:active {
+        transform: scale(0.95);
+      }
+
+      .cell-chip:focus-visible {
+        outline: 2px solid var(--theme-main-strong);
+        outline-offset: 2px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .cell-chip-area { animation: none; }
+        .cell-chip { transition: none; }
+      }
+
       .auto-excluded-slot {
         background: var(--hl-bg) !important;
         color: var(--hl-text) !important;
@@ -3498,7 +3561,7 @@
         return trimmed;
       }
 
-      function openTextInputDialog({ title = "직접 입력", placeholder = "입력하세요", defaultValue = "" } = {}) {
+      function openTextInputDialog({ title = "직접 입력", placeholder = "입력하세요", defaultValue = "", subjectChips = false } = {}) {
         return new Promise((resolve) => {
           const modal = document.createElement("div");
           modal.className = "text-input-modal open";
@@ -3546,11 +3609,68 @@
           });
 
           actions.append(cancelButton, confirmButton);
-          dialog.append(heading, input, actions);
+          // 반별 칸 입력창(subjectChips)만: 입력창 바로 아래에 설정한 담임/전담 과목 칩. 칩은 입력창에 값만 채우고 저장은 기존 확인/Enter 경로.
+          // 기존 첫 button 이 확인/취소로 남도록 칩은 button 이 아닌 div[role=button] 이다.
+          const chipArea = subjectChips ? buildCellSubjectChipArea(input, cleanup) : null;
+          dialog.append(heading, input);
+          if (chipArea) dialog.appendChild(chipArea);
+          dialog.appendChild(actions);
           modal.appendChild(dialog);
           document.body.appendChild(modal);
           window.setTimeout(() => input.focus(), 0);
         });
+      }
+
+      function buildCellSubjectChipArea(input, cleanup) {
+        const groups = [
+          ["homeroom", "담임 과목", sortSubjectsByBaseOrder(Array.from(selectedHomerooms).filter((subject) => !selectedSpecialists.has(subject)))],
+          ["specialist", "전담 과목", sortSubjectsByBaseOrder(Array.from(selectedSpecialists))]
+        ].filter((group) => group[2].length);
+        if (!groups.length) return null;
+        const area = document.createElement("section");
+        area.className = "cell-chip-area";
+        area.setAttribute("data-testid", "cell-chip-area");
+        area.setAttribute("aria-label", "설정한 과목에서 고르기");
+        groups.forEach(([groupId, groupTitle, subjects]) => {
+          const group = document.createElement("div");
+          group.className = "cell-chip-group";
+          const titleEl = document.createElement("h3");
+          titleEl.className = "cell-chip-title";
+          titleEl.textContent = groupTitle;
+          const grid = document.createElement("div");
+          grid.className = "cell-chip-grid";
+          subjects.forEach((subject) => {
+            const chip = document.createElement("div");
+            chip.className = "cell-chip";
+            chip.setAttribute("role", "button");
+            chip.setAttribute("tabindex", "0");
+            chip.setAttribute("data-testid", "cell-chip");
+            chip.setAttribute("data-group", groupId);
+            chip.setAttribute("data-subject", subject);
+            chip.textContent = subject;
+            chip.style.backgroundColor = getSubjectBg(subject);
+            chip.style.color = getSubjectFg(subject);
+            const fill = () => {
+              input.value = subject;
+              input.focus();
+            };
+            chip.addEventListener("click", fill);
+            chip.addEventListener("keydown", (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                event.stopPropagation();
+                fill();
+              } else if (event.key === "Escape") {
+                event.preventDefault();
+                cleanup(null);
+              }
+            });
+            grid.appendChild(chip);
+          });
+          group.append(titleEl, grid);
+          area.appendChild(group);
+        });
+        return area;
       }
 
       function closeAllTeacherMenus(exceptMenu = null) {
@@ -4871,7 +4991,8 @@
               const value = await openTextInputDialog({
                 title: `${className} ${day} ${period}교시 과목 직접 입력`,
                 placeholder: "과목명을 입력하세요",
-                defaultValue: current
+                defaultValue: current,
+                subjectChips: true
               });
 
               if (value === null) return;
