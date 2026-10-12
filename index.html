@@ -2366,6 +2366,14 @@
         cursor: pointer;
       }
       .tutorial-launch { flex-wrap: wrap; row-gap: 6px; }
+      /* 야간3 E: 단계 시연(눌림·머리칸 드래그 모양). transform 만 쓰고, 동작 줄이기면 모두 끈다. */
+      .qt-press { transform: scale(0.95); transition: transform 0.15s ease; }
+      .qt-demo-drag .period-row-head[data-last="true"] { animation: qtDemoDrag 0.4s ease-in-out 1; transform: none; }
+      @keyframes qtDemoDrag { 0%, 100% { box-shadow: 0 0 0 0 var(--theme-main-strong); } 50% { box-shadow: 0 6px 0 0 var(--theme-main-strong); } }
+      @media (prefers-reduced-motion: reduce) {
+        .qt-press { transform: none; transition: none; }
+        .qt-demo-drag .period-row-head[data-last="true"] { animation: none; }
+      }
       .qt-highlight { scroll-margin: 16px; border-radius: 8px; animation: qtGlow 1.6s ease-in-out infinite; }
       .qt-box {
         position: fixed;
@@ -6115,6 +6123,7 @@
             quizStepByKey("holiday").sync = sync;
           },
           apply: (day) => {
+            if (!holidayBody.querySelector("td")) renderHolidayToggleRow();
             const cell = holidayBody.querySelectorAll("td")[days.indexOf(day)];
             if (cell) cell.click();
           }
@@ -6514,6 +6523,9 @@
         if (!step) return;
         const moved = !quizTutorialBox.hidden && quizTutorialIndex >= 0 && quizTutorialIndex !== index;
         const ghost = moved ? quizMakeGhost() : null;
+        quizDemoToken += 1;
+        quizClearDemoMarks();
+        quizSetDemo("");
         quizTutorialIndex = index;
         if (step.needsAutoModal) {
           if (!autoGenerateModal.classList.contains("open")) {
@@ -6565,6 +6577,87 @@
           } else positionQuizBox(target, true);
         }, 0));
         window.setTimeout(repositionQuizBox, 120);
+        quizRunEntryDemo(step, quizDemoToken);
+      }
+
+      let quizDemoToken = 0;
+      let quizAnswerToken = 0;
+
+      function quizSetDemo(state) {
+        if (state) quizTutorialBox.setAttribute("data-qt-demo", state);
+        else quizTutorialBox.removeAttribute("data-qt-demo");
+      }
+
+      function quizClearDemoMarks() {
+        document.querySelectorAll(".qt-press").forEach((element) => element.classList.remove("qt-press"));
+        const grid = document.getElementById("periodGrid");
+        if (grid) grid.classList.remove("qt-demo-drag");
+      }
+
+      // 단계 진입 시연: 대상 버튼 눌림 → (실제 핸들러로) 열림 → 반영 → 다음 버튼 활성. 토큰이 바뀌면(이전·다음·종료) 중단된다.
+      function quizRunEntryDemo(step, token) {
+        const reduced = quizReducedMotion();
+        const nextBtn = document.getElementById("qtNext");
+        const alive = () => token === quizDemoToken && quizTutorialIndex >= 0 && quizTutorialSteps[quizTutorialIndex] === step;
+        const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, reduced ? 20 : ms));
+        const press = async (element) => {
+          quizSetDemo("press");
+          if (!element || reduced) return;
+          element.classList.add("qt-press");
+          await wait(150);
+          element.classList.remove("qt-press");
+        };
+        nextBtn.disabled = true;
+        quizSetDemo("press");
+        (async () => {
+          // 구멍(스포트라이트)이 자리를 잡은 뒤(0.3s)에 시연을 시작해 구멍 이동 전환을 늘리지 않는다.
+          await wait(300);
+          if (!alive()) return;
+          if (step.key === "classCount") {
+            await press(classCountSelect);
+          } else if (step.key === "specialist") {
+            await press(specialistToggle);
+          } else if (step.key === "homeroom") {
+            await press(homeroomToggle);
+          } else if (step.key === "periods") {
+            // 격자는 인라인 구멍 안에 있다. 팝업은 열지 않고 마지막 교시 머리칸이 드래그하는 모양만 CSS 로 보인다.
+            const grid = document.getElementById("periodGrid");
+            if (grid && !reduced) {
+              grid.classList.add("qt-demo-drag");
+              await wait(400);
+              grid.classList.remove("qt-demo-drag");
+            }
+          }
+          if (!alive()) return;
+          quizSetDemo("reflect");
+          await wait(40);
+          if (!alive()) return;
+          quizSetDemo("done");
+          nextBtn.disabled = false;
+        })();
+      }
+
+      // 답 시연: 카드에서 답을 누르면 실제 컨트롤이 살짝 눌렸다 돌아오고 반영된다(다음 버튼은 막지 않는다).
+      function quizAnswerDemo(event) {
+        if (quizTutorialIndex < 0 || !event.target.closest || !event.target.closest("#qtStep")) return;
+        if (!event.target.closest("button, input, label")) return;
+        if (quizTutorialBox.getAttribute("data-qt-demo") === "press" || quizTutorialBox.getAttribute("data-qt-demo") === "open") return;
+        const step = quizTutorialSteps[quizTutorialIndex];
+        const real = step.key === "classCount" ? classCountSelect : step.key === "specialist" ? specialistToggle : step.key === "homeroom" ? homeroomToggle : null;
+        quizAnswerToken += 1;
+        const token = quizAnswerToken;
+        const reduced = quizReducedMotion();
+        quizSetDemo("press");
+        if (real && !reduced) real.classList.add("qt-press");
+        window.setTimeout(() => {
+          if (token !== quizAnswerToken || quizTutorialIndex < 0) return;
+          if (real) real.classList.remove("qt-press");
+          quizSetDemo("reflect");
+          window.setTimeout(() => {
+            if (token !== quizAnswerToken || quizTutorialIndex < 0) return;
+            quizSetDemo("done");
+          }, reduced ? 20 : 150);
+        }, reduced ? 20 : 120);
       }
 
       function handleQuizEscape(event) {
@@ -6578,7 +6671,12 @@
       }
 
       function endQuizTutorial() {
+        quizDemoToken += 1;
+        quizAnswerToken += 1;
+        quizClearDemoMarks();
+        quizSetDemo("");
         movePeriodGroupInline(false);
+        document.removeEventListener("click", quizAnswerDemo);
         document.removeEventListener("keydown", handleQuizEscape, true);
         window.removeEventListener("resize", repositionQuizBox);
         window.removeEventListener("scroll", repositionQuizBox, true);
@@ -6600,6 +6698,7 @@
         endTutorial();
         endQuizTutorial();
         movePeriodGroupInline(true);
+        document.addEventListener("click", quizAnswerDemo);
         document.addEventListener("keydown", handleQuizEscape, true);
         window.addEventListener("resize", repositionQuizBox);
         window.addEventListener("scroll", repositionQuizBox, true);
