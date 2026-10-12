@@ -595,14 +595,55 @@
         cursor: grab;
       }
 
+      .period-group {
+        position: relative;
+      }
+
+      .period-drag-label {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2;
+        margin: 0;
+        padding: 3px 6px;
+        border-radius: 8px;
+        text-align: center;
+        font-size: 0.9rem;
+        font-weight: 800;
+        background: var(--theme-main-strong);
+        color: var(--theme-on-main);
+      }
+
+      .period-drag-label[hidden] {
+        display: none;
+      }
+
       .period-row-head[data-last="true"] {
-        background: var(--hl-bg);
-        color: var(--hl-text);
+        position: relative;
+        z-index: 1;
+        border: 2px solid var(--theme-main-strong);
+        background: var(--theme-main-strong);
+        color: var(--theme-on-main);
+        box-shadow: 0 0 8px 1px color-mix(in srgb, var(--theme-main) 45%, transparent);
         animation: periodHeadPulse 1.5s ease-in-out infinite;
+      }
+
+      .period-row-head[data-last="true"]::before {
+        content: "≡";
+        position: absolute;
+        top: 1px;
+        left: 4px;
+        font-size: 0.7rem;
+        line-height: 1;
       }
 
       .period-row-head[data-active="true"] {
         animation: none;
+      }
+
+      .period-row-head[data-last="true"][data-active="true"] {
+        box-shadow: 0 0 14px 4px color-mix(in srgb, var(--theme-main) 70%, transparent);
       }
 
       .period-row-head[data-extra="true"],
@@ -614,9 +655,20 @@
         cursor: default;
       }
 
+      .period-cell[data-lastrow="true"] {
+        border: 2px solid var(--theme-main-strong);
+        border-style: solid;
+        background: color-mix(in srgb, var(--theme-main) 15%, var(--card));
+        opacity: 1;
+      }
+
+      .period-grid[data-dragging="true"] .period-cell[data-lastrow="true"] {
+        background: color-mix(in srgb, var(--theme-main) 32%, var(--card));
+      }
+
       @keyframes periodHeadPulse {
-        0%, 100% { background-color: var(--hl-bg); }
-        50% { background-color: var(--card); }
+        0%, 100% { transform: scale(1); box-shadow: 0 0 6px 1px color-mix(in srgb, var(--theme-main) 40%, transparent); }
+        50% { transform: scale(1.06); box-shadow: 0 0 16px 5px color-mix(in srgb, var(--theme-main) 70%, transparent); }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -2265,6 +2317,7 @@
       <div class="period-dialog" role="dialog" aria-modal="true" aria-label="시간표 시간대">
         <div class="control-group period-group">
           <span class="period-group-title" id="periodGridTitle">시간표 시간대</span>
+          <p class="period-drag-label" id="periodDragLabel" data-testid="pg-drag-label" role="status" hidden></p>
           <div class="period-grid" id="periodGrid" role="group" aria-labelledby="periodGridTitle"></div>
         </div>
         <div class="period-actions">
@@ -2886,6 +2939,30 @@
         }
       }
 
+      // 격자에서 꺼진 칸(휴일 제외)의 입력은 생성 경로가 subjectStore 를 직접 읽으므로, 드래그가 끝날 때 메모리 보관함으로 옮겨 숨기고
+      // 그 칸이 다시 켜지면(비어 있을 때) 되돌린다. 보관함은 저장하지 않는다.
+      const periodStash = new Map();
+      function syncPeriodStash() {
+        periodStash.forEach((item, key) => {
+          if (isDisabledSlot(item.day, item.period)) return;
+          if (!subjectStore[key]) subjectStore[key] = item.entry;
+          periodStash.delete(key);
+        });
+        const classes = buildClasses(classCount);
+        days.forEach((day) => {
+          if (holidayDays.has(day)) return;
+          for (let period = 1; period <= MAX_PERIOD_LIMIT; period += 1) {
+            if (periodOn[day].has(period)) continue;
+            for (const className of classes) {
+              const key = getCellKey(className, day, period);
+              if (!subjectStore[key]) continue;
+              periodStash.set(key, { day, period, entry: subjectStore[key] });
+              delete subjectStore[key];
+            }
+          }
+        });
+      }
+
       function visiblePeriodRows() {
         return Math.max(DEFAULT_PERIOD_COUNT, maxPeriodCount);
       }
@@ -2924,6 +3001,7 @@
           });
         }
         syncPeriodGrid();
+        refreshQuizAfterPeriodChange();
         if (activeId) {
           const again = grid.querySelector(`[data-testid="${activeId}"]`);
           if (again && !again.disabled) again.focus({ preventScroll: true });
@@ -2937,18 +3015,23 @@
         const setFlag = (el, name, on) => { if (on) el.setAttribute(name, "true"); else el.removeAttribute(name); };
         grid.querySelectorAll(".period-row-head").forEach((head) => {
           const row = Number(head.getAttribute("data-row"));
-          setFlag(head, "data-last", row === visible);
-          setFlag(head, "data-extra", row > visible);
+          setFlag(head, "data-last", row === maxPeriodCount);
+          setFlag(head, "data-extra", periodExtraOpen && row > maxPeriodCount);
           setFlag(head, "data-active", periodActive);
         });
+        setFlag(grid, "data-dragging", periodActive);
+        const dragLabel = document.getElementById("periodDragLabel");
+        if (dragLabel) dragLabel.hidden = !periodActive;
         grid.querySelectorAll(".period-cell").forEach((cell) => {
           const row = Number(cell.getAttribute("data-row"));
           const day = cell.getAttribute("data-day");
           const on = periodOn[day].has(row) && !holidayDays.has(day);
           cell.setAttribute("aria-pressed", on ? "true" : "false");
           cell.textContent = on ? String(row) : "✕";
-          cell.disabled = row > visible;
-          setFlag(cell, "data-extra", row > visible);
+          const extra = periodExtraOpen && row > maxPeriodCount;
+          cell.disabled = extra || row > visible;
+          setFlag(cell, "data-extra", extra);
+          setFlag(cell, "data-lastrow", row === maxPeriodCount);
         });
       }
 
@@ -2970,6 +3053,7 @@
         }
         updateMaxPeriodCount();
         savePeriodGrid();
+        syncPeriodStash();
         renderPeriodGrid();
         renderTimetables();
       }
@@ -2982,22 +3066,37 @@
         renderPeriodGrid();
       }
 
+      // 활성화 때 고정한 팝업 위쪽 위치·최대 높이를 원래(가운데 정렬)로 되돌린다.
+      function releasePeriodDialogAnchor() {
+        const dialogEl = document.querySelector(".period-dialog");
+        const savedScroll = dialogEl ? dialogEl.scrollTop : 0;
+        periodModal.style.alignItems = "";
+        periodModal.style.paddingTop = "";
+        if (dialogEl) {
+          dialogEl.style.maxHeight = "";
+          dialogEl.scrollTop = savedScroll;
+        }
+      }
+
       function cancelPeriodPress() {
         const press = periodPress;
         if (!press) return;
         window.clearTimeout(press.timer);
+        if (press.raf) window.cancelAnimationFrame(press.raf);
         periodPress = null;
         if (!press.active) return;
+        releasePeriodDialogAnchor();
         periodActive = false;
         if (press.changed) {
           updateMaxPeriodCount();
           savePeriodGrid();
+          syncPeriodStash();
           renderTimetables();
         }
         renderPeriodGrid();
       }
 
-      // 머리칸(n교시)을 0.5초 누르면 활성: 14교시까지 반투명 행이 나오고, 위아래로 끌면 닿은 행까지 전 요일을 켠다(늘리기 전용).
+      // 머리칸(n교시)을 0.5초 누르면 활성: 14교시까지 행이 나오고, 위아래로 끌면 손이 닿은 행(1~14)까지 휴일이 아닌 요일을 켜고 그 뒤는 끈다(입력은 안 지움).
       function setupPeriodPress() {
         const grid = document.getElementById("periodGrid");
         const PRESS_MS = 500;
@@ -3007,6 +3106,41 @@
           grid.querySelectorAll(".period-row-head").forEach((head) => { if (head.getBoundingClientRect().top <= y) row = Number(head.getAttribute("data-row")); });
           return row;
         };
+        // 손 위치의 행(1~14)까지 켜고 그 뒤는 끈다. 휴일 요일은 그대로 두고, 꺼진 칸의 입력(subjectStore)은 지우지 않는다.
+        const applyDrag = (press) => {
+          const target = Math.max(1, Math.min(MAX_PERIOD_LIMIT, rowFromY(press.curY)));
+          let changed = false;
+          days.forEach((day) => {
+            if (holidayDays.has(day)) return;
+            for (let period = 1; period <= MAX_PERIOD_LIMIT; period += 1) {
+              const want = period <= target;
+              if (want !== periodOn[day].has(period)) {
+                if (want) periodOn[day].add(period); else periodOn[day].delete(period);
+                changed = true;
+              }
+            }
+          });
+          if (changed) {
+            press.changed = true;
+            updateMaxPeriodCount();
+            syncPeriodGrid();
+          }
+          const label = document.getElementById("periodDragLabel");
+          if (label) label.textContent = `지금 드래그 중 · ${target}교시`;
+        };
+        // 손이 격자 스크롤 영역(팝업, 인라인이면 화면) 위·아래 끝 48px 안이면 프레임마다 자동 스크롤하고 행을 다시 판정한다.
+        const tick = () => {
+          const press = periodPress;
+          if (!press || !press.active) return;
+          const scroller = scrollerOf();
+          const box = scroller ? scroller.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+          const dy = press.curY > box.bottom - 48 ? 10 : press.curY < box.top + 48 ? -10 : 0;
+          if (dy) {
+            if (scroller) scroller.scrollTop += dy; else window.scrollBy(0, dy);
+            applyDrag(press);
+          }
+          press.raf = window.requestAnimationFrame(tick);
+        };
         grid.addEventListener("contextmenu", (event) => {
           if (event.target.closest(".period-row-head")) event.preventDefault();
         });
@@ -3015,14 +3149,37 @@
           if (!head || (event.pointerType === "mouse" && event.button !== 0)) return;
           cancelPeriodPress();
           const scroller = scrollerOf();
-          const press = { id: event.pointerId, x: event.clientX, y: event.clientY, row: Number(head.getAttribute("data-row")), active: false, moved: false, changed: false, base: 0, scrollTop: scroller ? scroller.scrollTop : window.scrollY, timer: 0 };
+          const press = { id: event.pointerId, x: event.clientX, y: event.clientY, row: Number(head.getAttribute("data-row")), active: false, moved: false, changed: false, raf: 0, curY: event.clientY, scrollTop: scroller ? scroller.scrollTop : window.scrollY, timer: 0 };
           press.timer = window.setTimeout(() => {
             if (periodPress !== press) return;
             press.active = true;
             periodActive = true;
-            press.base = visiblePeriodRows();
+            // 흐린 행이 생겨도 누른 머리칸이 손가락 아래 같은 y 에 머물게: 팝업은 지금 위쪽 위치를 고정해 아래로만 자라게 하고(손 떼면 원복), 인라인은 페이지를 보정한다.
+            const dialog = scrollerOf();
+            const topBefore = (grid.querySelector(`.period-row-head[data-row="${press.row}"]`) || head).getBoundingClientRect().top;
+            if (dialog) {
+              const dialogTop = dialog.getBoundingClientRect().top;
+              periodModal.style.alignItems = "flex-start";
+              periodModal.style.paddingTop = `${dialogTop}px`;
+              dialog.style.maxHeight = `min(90vh, calc(100vh - ${dialogTop + 8}px))`;
+            }
             periodExtraOpen = true;
             renderPeriodGrid();
+            if (dialog && window.innerWidth >= 700) {
+              // 마우스 화면: 14행 전체가 화면 안에 들어가도록 위쪽 위치를 필요한 만큼 올린다(스크롤 없이 14교시 도달).
+              const dialogTop = Number.parseFloat(periodModal.style.paddingTop) || 0;
+              const pad = Math.max(0, Math.min(dialogTop, window.innerHeight - 8 - dialog.scrollHeight - 2));
+              periodModal.style.paddingTop = `${pad}px`;
+              dialog.style.maxHeight = `calc(100vh - ${pad + 8}px)`;
+            }
+            if (!dialog) {
+              const moved = grid.querySelector(`.period-row-head[data-row="${press.row}"]`);
+              const delta = moved ? moved.getBoundingClientRect().top - topBefore : 0;
+              if (Math.abs(delta) > 1) window.scrollBy(0, delta);
+            }
+            const label = document.getElementById("periodDragLabel");
+            if (label) label.textContent = `지금 드래그 중 · ${maxPeriodCount}교시`;
+            press.raf = window.requestAnimationFrame(tick);
             const again = grid.querySelector(`.period-row-head[data-row="${press.row}"]`);
             if (again && again.setPointerCapture) {
               try { again.setPointerCapture(press.id); } catch (error) { /* 이미 뗀 포인터 */ }
@@ -3046,29 +3203,8 @@
             }
             return;
           }
-          const target = Math.min(MAX_PERIOD_LIMIT, Math.max(press.base, rowFromY(event.clientY)));
-          let changed = false;
-          days.forEach((day) => {
-            if (holidayDays.has(day)) return;
-            for (let period = press.base + 1; period <= MAX_PERIOD_LIMIT; period += 1) {
-              const want = period <= target;
-              if (want !== periodOn[day].has(period)) {
-                if (want) periodOn[day].add(period); else periodOn[day].delete(period);
-                changed = true;
-              }
-            }
-          });
-          if (changed) {
-            press.changed = true;
-            updateMaxPeriodCount();
-            syncPeriodGrid();
-          }
-          const scroller = scrollerOf();
-          if (scroller) {
-            const box = scroller.getBoundingClientRect();
-            if (event.clientY > box.bottom - 40) scroller.scrollTop += 14;
-            else if (event.clientY < box.top + 40) scroller.scrollTop -= 14;
-          }
+          press.curY = event.clientY;
+          applyDrag(press);
         });
         grid.addEventListener("pointerup", cancelPeriodPress);
         grid.addEventListener("pointercancel", cancelPeriodPress);
@@ -5934,6 +6070,11 @@
         if (best.pinned) quizTutorialBox.classList.add("qt-noarrow");
         quizTutorialBox.setAttribute("data-qt-place", "spotlight");
         setQuizSpotlight(m.rects, tr, animate);
+      }
+
+      // 시간대 격자 높이가 바뀌면(행 변경·드래그) 질문 periods 단계의 구멍·상자를 다시 계산한다.
+      function refreshQuizAfterPeriodChange() {
+        if (quizTutorialIndex >= 0 && quizIsStep("periods")) repositionQuizBox();
       }
 
       function repositionQuizBox() {
