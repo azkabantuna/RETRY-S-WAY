@@ -2687,6 +2687,110 @@
         .cal-grid.cal-slide-prev { animation: calFade 0.01s linear both; }
         .cal-nav { transition: none; }
       }
+
+      /* 담당 교사 말풍선: 이름 버튼은 기존 글자 모양 그대로, 누르면 이름 아래(또는 위) 작은 목록 말풍선. 색은 테마 변수 파생만. */
+      .teacher-name-btn {
+        position: relative;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .teacher-name-btn::after {
+        content: "";
+        position: absolute;
+        inset: -12px -8px;
+      }
+
+      .teacher-bubble {
+        position: fixed;
+        z-index: 85;
+        box-sizing: border-box;
+        min-width: 120px;
+        max-width: calc(100vw - 12px);
+        padding: 6px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--card);
+        color: var(--text);
+        box-shadow: 0 6px 18px color-mix(in srgb, var(--theme-text) 18%, transparent);
+        opacity: 0;
+        transform: scale(0.95);
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0.2s;
+      }
+
+      .teacher-bubble[data-placement="bottom"] { transform-origin: top center; }
+      .teacher-bubble[data-placement="top"] { transform-origin: bottom center; }
+
+      .teacher-bubble.open {
+        opacity: 1;
+        transform: none;
+        visibility: visible;
+        pointer-events: auto;
+        transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s;
+      }
+
+      .teacher-bubble-tail {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: var(--card);
+        transform: rotate(45deg);
+      }
+
+      .teacher-bubble[data-placement="bottom"] .teacher-bubble-tail {
+        top: -6px;
+        border-top: 1px solid var(--line);
+        border-left: 1px solid var(--line);
+      }
+
+      .teacher-bubble[data-placement="top"] .teacher-bubble-tail {
+        bottom: -6px;
+        border-bottom: 1px solid var(--line);
+        border-right: 1px solid var(--line);
+      }
+
+      .teacher-bubble-option {
+        display: block;
+        width: 100%;
+        min-height: 36px;
+        padding: 6px 10px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text);
+        font: inherit;
+        font-size: 0.9rem;
+        font-weight: 700;
+        text-align: left;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+      }
+
+      .teacher-bubble-option:hover,
+      .teacher-bubble-option:focus-visible {
+        background: color-mix(in srgb, var(--theme-main) 12%, var(--card));
+        outline: none;
+      }
+
+      .teacher-bubble-option[aria-selected="true"] {
+        background: color-mix(in srgb, var(--theme-main) 22%, var(--card));
+      }
+
+      .teacher-bubble-option[data-custom="true"] {
+        color: var(--theme-main-strong);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .teacher-bubble,
+        .teacher-bubble.open { transition-duration: 0.01s; transform: none; }
+        .teacher-bubble-option { transition: none; }
+      }
     </style>
   </head>
   <body>
@@ -4271,7 +4375,10 @@
           const teacherName = getAssignedTeacher(tableName) || "미지정";
           const teacherBadge = document.createElement("div");
           teacherBadge.className = "specialist-teacher-badge";
-          teacherBadge.innerHTML = `(<span>담당 교사:</span> <strong style="color:${getTeacherColor(teacherName)}">${teacherName}</strong>)`;
+          teacherBadge.innerHTML = `(<span>담당 교사:</span> <button type="button" class="teacher-name-btn" data-testid="badge-teacher-btn" aria-haspopup="listbox" aria-expanded="false"><strong style="color:${getTeacherColor(teacherName)}">${teacherName}</strong></button>)`;
+          teacherBadge.querySelector(".teacher-name-btn").addEventListener("click", (event) => {
+            toggleTeacherBubble(event.currentTarget, tableName);
+          });
 
           const table = document.createElement("table");
           const thead = document.createElement("thead");
@@ -7044,6 +7151,154 @@
       renderTimetables();
 
       // 하단 탭 바: 시간표 / 캘린더 패널 전환. 첫 화면은 항상 시간표(저장 안 함).
+      // ===== 담당 교사 말풍선(전담 시간표 badge 의 이름을 누르면 열림). 저장은 자동 생성 창과 같은 메모리 대입(subjectTeacherAssignments)뿐. =====
+      let teacherBubbleEl = null;
+      let teacherBubbleBtn = null;
+      let teacherBubbleSubject = "";
+
+      function closeTeacherBubble(restoreFocus) {
+        if (!teacherBubbleEl || !teacherBubbleEl.classList.contains("open")) return;
+        teacherBubbleEl.classList.remove("open");
+        teacherBubbleEl.setAttribute("aria-hidden", "true");
+        if (teacherBubbleBtn && teacherBubbleBtn.isConnected) {
+          teacherBubbleBtn.setAttribute("aria-expanded", "false");
+          if (restoreFocus) teacherBubbleBtn.focus({ preventScroll: true });
+        }
+        teacherBubbleBtn = null;
+      }
+
+      function focusTeacherNameButton(subject) {
+        const btn = document.querySelector(`.specialist-card[data-tutorial-subject="${subject}"] .teacher-name-btn`);
+        if (btn) btn.focus({ preventScroll: true });
+      }
+
+      function positionTeacherBubble(btn) {
+        const bubble = teacherBubbleEl;
+        const rect = btn.getBoundingClientRect();
+        const margin = 6;
+        const gap = 10;
+        const w = bubble.offsetWidth;
+        const h = bubble.offsetHeight;
+        const nav = document.getElementById("bottomNav");
+        const navTop = nav && getComputedStyle(nav).opacity !== "0" ? nav.getBoundingClientRect().top : window.innerHeight;
+        const limit = Math.min(window.innerHeight, navTop) - margin;
+        const centerX = rect.left + rect.width / 2;
+        const left = Math.min(Math.max(margin, centerX - w / 2), Math.max(margin, window.innerWidth - w - margin));
+        let placement = "bottom";
+        let top = rect.bottom + gap;
+        if (top + h > limit && rect.top - gap - h >= margin) {
+          placement = "top";
+          top = rect.top - gap - h;
+        }
+        bubble.setAttribute("data-placement", placement);
+        bubble.style.left = `${left}px`;
+        bubble.style.top = `${top}px`;
+        const tail = bubble.querySelector(".teacher-bubble-tail");
+        tail.style.left = `${Math.min(Math.max(12, centerX - left), w - 12) - 5}px`;
+      }
+
+      function chooseTeacherFromBubble(subject, name) {
+        subjectTeacherAssignments[subject] = name;
+        closeTeacherBubble(false);
+        renderSpecialistTimetables();
+        refreshTutorialHighlight();
+        focusTeacherNameButton(subject);
+      }
+
+      async function addTeacherFromBubble(subject) {
+        closeTeacherBubble(false);
+        const customName = await openTextInputDialog({
+          title: `${subject} 담당 교사 직접 입력`,
+          placeholder: "교사명을 입력하세요"
+        });
+        const trimmed = addTeacherOption(customName);
+        if (!trimmed) {
+          focusTeacherNameButton(subject);
+          return;
+        }
+        subjectTeacherAssignments[subject] = trimmed;
+        renderSpecialistTimetables();
+        refreshTutorialHighlight();
+        focusTeacherNameButton(subject);
+      }
+
+      function toggleTeacherBubble(btn, subject) {
+        if (teacherBubbleBtn === btn) {
+          closeTeacherBubble(true);
+          return;
+        }
+        // 사용법 보기·질문 진행 중이거나 팝업이 열려 있으면 열지 않는다.
+        if (quizTutorialIndex >= 0 || document.body.classList.contains("tutorial-active") || document.querySelector(NAV_BLOCKING_POPUPS)) return;
+        closeTeacherBubble(false);
+        if (!teacherBubbleEl) {
+          teacherBubbleEl = document.createElement("div");
+          teacherBubbleEl.id = "teacherBubble";
+          teacherBubbleEl.className = "teacher-bubble";
+          teacherBubbleEl.setAttribute("role", "listbox");
+          teacherBubbleEl.setAttribute("aria-label", "담당 교사 고르기");
+          teacherBubbleEl.setAttribute("data-testid", "teacher-bubble");
+          teacherBubbleEl.addEventListener("keydown", (event) => {
+            if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+            event.preventDefault();
+            const items = Array.from(teacherBubbleEl.querySelectorAll(".teacher-bubble-option"));
+            const index = items.indexOf(document.activeElement);
+            const nextIndex = event.key === "ArrowDown" ? Math.min(items.length - 1, index + 1) : Math.max(0, index - 1);
+            items[nextIndex].focus({ preventScroll: true });
+          });
+          document.body.appendChild(teacherBubbleEl);
+        }
+        const bubble = teacherBubbleEl;
+        bubble.innerHTML = "";
+        const tail = document.createElement("span");
+        tail.className = "teacher-bubble-tail";
+        tail.setAttribute("data-testid", "teacher-bubble-tail");
+        bubble.appendChild(tail);
+        const current = getAssignedTeacher(subject);
+        const addOption = (label, selected, custom, onPick) => {
+          const option = document.createElement("button");
+          option.type = "button";
+          option.className = "teacher-bubble-option";
+          option.setAttribute("role", "option");
+          option.setAttribute("aria-selected", selected ? "true" : "false");
+          option.setAttribute("data-testid", "teacher-bubble-option");
+          if (custom) option.setAttribute("data-custom", "true");
+          option.textContent = label;
+          option.addEventListener("click", (event) => {
+            event.stopPropagation();
+            onPick();
+          });
+          bubble.appendChild(option);
+          return option;
+        };
+        teacherOptions.forEach((name) => addOption(name, name === current, false, () => chooseTeacherFromBubble(subject, name)));
+        addOption("직접 입력", false, true, () => addTeacherFromBubble(subject));
+        teacherBubbleBtn = btn;
+        teacherBubbleSubject = subject;
+        btn.setAttribute("aria-expanded", "true");
+        bubble.setAttribute("aria-hidden", "false");
+        positionTeacherBubble(btn);
+        void bubble.offsetWidth;
+        bubble.classList.add("open");
+        const focusTarget = bubble.querySelector('.teacher-bubble-option[aria-selected="true"]') || bubble.querySelector(".teacher-bubble-option");
+        if (focusTarget) focusTarget.focus({ preventScroll: true });
+      }
+
+      document.addEventListener("click", (event) => {
+        if (!teacherBubbleEl || !teacherBubbleEl.classList.contains("open")) return;
+        if (teacherBubbleEl.contains(event.target) || event.target.closest(".teacher-name-btn")) return;
+        closeTeacherBubble(false);
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape" || !teacherBubbleEl || !teacherBubbleEl.classList.contains("open")) return;
+        event.stopPropagation();
+        closeTeacherBubble(true);
+      }, true);
+      window.addEventListener("resize", () => closeTeacherBubble(false));
+      window.addEventListener("scroll", (event) => {
+        if (teacherBubbleEl && teacherBubbleEl.contains(event.target)) return;
+        closeTeacherBubble(false);
+      }, true);
+
       // 탭 전환을 막는 팝업/모달 목록(시험도 같은 목록을 쓴다).
       const NAV_BLOCKING_POPUPS = ".period-modal.open, .pe-picker-modal.open, .conflict-modal.open, .auto-modal.open, .text-input-modal.open";
 
@@ -7181,6 +7436,7 @@
           // 사용법 보기·질문으로 설정하기 진행 중에는 전환하지 않는다.
           if (quizTutorialIndex >= 0 || document.body.classList.contains("tutorial-active")) return;
           window.clearTimeout(enterTimer);
+          closeTeacherBubble(false);
           if (current === "timetable") {
             savedScrollY = window.scrollY;
             setThemeOptionsOpen(false);
