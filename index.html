@@ -2791,6 +2791,28 @@
         .teacher-bubble.open { transition-duration: 0.01s; transform: none; }
         .teacher-bubble-option { transition: none; }
       }
+
+      /* 반별 칸 입력창: 확인 버튼 이름 전환(0.15s)과 칩 자동 반영 뒤 부드러운 닫힘(0.2s). 라벨 폭은 두 이름이 같게 고정해 버튼 크기가 안 변한다. */
+      .cell-confirm-label {
+        display: inline-block;
+        min-width: 4em;
+        text-align: center;
+        transition: opacity 0.15s ease;
+      }
+
+      .cell-confirm-label[data-fading="true"] {
+        opacity: 0;
+      }
+
+      .text-input-modal[data-closing="true"] {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .cell-confirm-label { transition: none; }
+      }
     </style>
   </head>
   <body>
@@ -3918,7 +3940,7 @@
           heading.textContent = title;
           const input = document.createElement("input");
           input.type = "text";
-          input.placeholder = placeholder;
+          input.placeholder = subjectChips ? "직접입력" : placeholder;
           input.value = defaultValue;
 
           const actions = document.createElement("div");
@@ -3930,14 +3952,72 @@
           confirmButton.type = "button";
           confirmButton.className = "confirm";
           confirmButton.textContent = "확인";
+          const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-          const cleanup = (value) => {
-            modal.remove();
+          // 반별 칸 입력창(subjectChips)만: 확인 버튼 이름이 입력칸 상태를 따른다(비면 '전담제외', 글자 있으면 '확인'). 동작은 그대로(이름만).
+          let confirmLabel = null;
+          let labelTimer = 0;
+          const LABEL_TEXT = { exclude: "전담제외", ok: "확인" };
+          const syncLabel = (instant) => {
+            if (!confirmLabel) return;
+            const mode = input.value.trim() ? "ok" : "exclude";
+            window.clearTimeout(labelTimer);
+            confirmButton.setAttribute("data-mode", mode);
+            if (confirmLabel.textContent === LABEL_TEXT[mode]) {
+              confirmLabel.removeAttribute("data-fading");
+              return;
+            }
+            if (instant || reducedMotion) {
+              confirmLabel.textContent = LABEL_TEXT[mode];
+              confirmLabel.removeAttribute("data-fading");
+              return;
+            }
+            confirmLabel.setAttribute("data-fading", "true");
+            labelTimer = window.setTimeout(() => {
+              confirmLabel.textContent = LABEL_TEXT[input.value.trim() ? "ok" : "exclude"];
+              confirmLabel.removeAttribute("data-fading");
+            }, 150);
+          };
+          if (subjectChips) {
+            confirmButton.setAttribute("data-testid", "cell-confirm-btn");
+            confirmButton.textContent = "";
+            confirmLabel = document.createElement("span");
+            confirmLabel.className = "cell-confirm-label";
+            confirmButton.appendChild(confirmLabel);
+          }
+
+          // done: 한 번만 결과를 돌려준다(칩 자동 반영·확인·Enter·취소가 겹쳐도 1회). soft: 칩 자동 반영일 때만 0.2초 부드럽게 닫힘.
+          let done = false;
+          let chipTimer = 0;
+          const finish = (value, soft) => {
+            if (done) return;
+            done = true;
+            window.clearTimeout(chipTimer);
+            window.clearTimeout(labelTimer);
+            if (soft && !reducedMotion) {
+              modal.setAttribute("data-closing", "true");
+              window.setTimeout(() => modal.remove(), 220);
+            } else {
+              modal.remove();
+            }
             resolve(value);
+          };
+          const cleanup = (value) => finish(value, false);
+          const onChipPick = () => {
+            if (done) return;
+            syncLabel(false);
+            window.clearTimeout(chipTimer);
+            chipTimer = window.setTimeout(() => finish(input.value.trim(), true), 300);
           };
           cancelButton.addEventListener("click", () => cleanup(null));
           confirmButton.addEventListener("click", () => cleanup(input.value.trim()));
+          // 사용자가 실제로 글자를 칠 때만(input 이벤트) 칩 자동 반영을 취소한다. 칩이 값을 채울 때는 input 이벤트가 없다.
+          input.addEventListener("input", () => {
+            window.clearTimeout(chipTimer);
+            syncLabel(false);
+          });
           input.addEventListener("keydown", (event) => {
+            if (done) return;
             if (event.key === "Enter") {
               event.preventDefault();
               cleanup(input.value.trim());
@@ -3953,17 +4033,18 @@
           actions.append(cancelButton, confirmButton);
           // 반별 칸 입력창(subjectChips)만: 입력창 바로 아래에 설정한 담임/전담 과목 칩. 칩은 입력창에 값만 채우고 저장은 기존 확인/Enter 경로.
           // 기존 첫 button 이 확인/취소로 남도록 칩은 button 이 아닌 div[role=button] 이다.
-          const chipArea = subjectChips ? buildCellSubjectChipArea(input, cleanup) : null;
+          const chipArea = subjectChips ? buildCellSubjectChipArea(input, cleanup, onChipPick) : null;
           dialog.append(heading, input);
           if (chipArea) dialog.appendChild(chipArea);
           dialog.appendChild(actions);
           modal.appendChild(dialog);
           document.body.appendChild(modal);
+          syncLabel(true);
           window.setTimeout(() => input.focus(), 0);
         });
       }
 
-      function buildCellSubjectChipArea(input, cleanup) {
+      function buildCellSubjectChipArea(input, cleanup, onPick) {
         const groups = [
           ["homeroom", "담임 과목", sortSubjectsByBaseOrder(Array.from(selectedHomerooms).filter((subject) => !selectedSpecialists.has(subject)))],
           ["specialist", "전담 과목", sortSubjectsByBaseOrder(Array.from(selectedSpecialists))]
@@ -3995,6 +4076,7 @@
             const fill = () => {
               input.value = subject;
               input.focus();
+              if (onPick) onPick();
             };
             chip.addEventListener("click", fill);
             chip.addEventListener("keydown", (event) => {
