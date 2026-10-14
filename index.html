@@ -2563,6 +2563,130 @@
         .tab-panel.tab-in { animation: tabPanelFade 0.01s linear both; }
         .bottom-nav, .bottom-nav-tab, .bottom-nav-tab svg { transition-duration: 0.01s; }
       }
+
+      /* 캘린더 탭: 날짜 칸은 누를 수 없는 글자 칸(button·tabindex·click 없음). 색은 테마 변수 파생만. */
+      .cal-wrap {
+        padding: 18px;
+      }
+
+      .cal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .cal-title {
+        margin: 0;
+        font-size: 1.15rem;
+        text-align: center;
+      }
+
+      .cal-nav {
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border: 1px solid var(--theme-line);
+        border-radius: 50%;
+        background: var(--theme-card);
+        color: var(--theme-text);
+        font-size: 1rem;
+        font-weight: 800;
+        cursor: pointer;
+        transition: transform 0.2s ease, background-color 0.2s ease;
+      }
+
+      .cal-nav:active {
+        transform: scale(0.95);
+      }
+
+      .cal-nav:focus-visible {
+        outline: 2px solid var(--theme-main-strong);
+        outline-offset: 2px;
+      }
+
+      .cal-viewport {
+        overflow: hidden;
+      }
+
+      .cal-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 4px;
+      }
+
+      .cal-grid.cal-slide-next {
+        animation: calSlideNext 0.25s ease both;
+      }
+
+      .cal-grid.cal-slide-prev {
+        animation: calSlidePrev 0.25s ease both;
+      }
+
+      @keyframes calSlideNext {
+        from { opacity: 0; transform: translateX(28px); }
+        to { opacity: 1; transform: none; }
+      }
+
+      @keyframes calSlidePrev {
+        from { opacity: 0; transform: translateX(-28px); }
+        to { opacity: 1; transform: none; }
+      }
+
+      @keyframes calFade {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      .cal-dow {
+        padding: 6px 0;
+        text-align: center;
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: var(--theme-muted);
+      }
+
+      .cal-day {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        box-sizing: border-box;
+        border: 1px solid var(--theme-line);
+        border-radius: 10px;
+        background: var(--theme-card);
+        color: var(--theme-text);
+        font-size: 0.9rem;
+        font-weight: 700;
+        cursor: default;
+      }
+
+      .cal-dow[data-dow="0"],
+      .cal-day[data-dow="0"] {
+        color: color-mix(in srgb, var(--theme-danger-text) 85%, var(--theme-text));
+      }
+
+      .cal-dow[data-dow="6"],
+      .cal-day[data-dow="6"] {
+        color: color-mix(in srgb, var(--theme-info-text) 85%, var(--theme-text));
+      }
+
+      .cal-day[data-other-month="true"] {
+        opacity: 0.4;
+      }
+
+      .cal-day[data-today="true"] {
+        border-color: var(--theme-main-strong);
+        background: var(--theme-main-strong);
+        color: var(--theme-on-main);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .cal-grid.cal-slide-next,
+        .cal-grid.cal-slide-prev { animation: calFade 0.01s linear both; }
+        .cal-nav { transition: none; }
+      }
     </style>
   </head>
   <body>
@@ -6920,6 +7044,128 @@
       renderTimetables();
 
       // 하단 탭 바: 시간표 / 캘린더 패널 전환. 첫 화면은 항상 시간표(저장 안 함).
+      // 탭 전환을 막는 팝업/모달 목록(시험도 같은 목록을 쓴다).
+      const NAV_BLOCKING_POPUPS = ".period-modal.open, .pe-picker-modal.open, .conflict-modal.open, .auto-modal.open, .text-input-modal.open";
+
+      // ===== 캘린더 탭: 한 달 달력(저장 없음, 날짜 칸은 눌러도 무반응). 처음 탭을 열 때 그린다. =====
+      let calendarState = null;
+      function ensureCalendar(panel) {
+        if (calendarState) return;
+        const pad2 = (n) => String(n).padStart(2, "0");
+        const dateAt = (year, month, day) => {
+          const d = new Date(2000, 0, 1);
+          d.setFullYear(year, month, day);
+          return d;
+        };
+        const keyOf = (d) => `${String(d.getFullYear()).padStart(4, "0")}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+        const now = new Date();
+        const state = { year: now.getFullYear(), month: now.getMonth(), cells: [], timer: 0, slideTimer: 0 };
+        calendarState = state;
+
+        const wrap = document.createElement("section");
+        wrap.className = "cal-wrap";
+        wrap.setAttribute("data-testid", "cal-root");
+        const head = document.createElement("div");
+        head.className = "cal-head";
+        const prev = document.createElement("button");
+        prev.type = "button";
+        prev.className = "cal-nav";
+        prev.setAttribute("data-testid", "cal-prev");
+        prev.setAttribute("aria-label", "이전 달");
+        prev.textContent = "\u25C0";
+        const title = document.createElement("h2");
+        title.className = "cal-title";
+        title.setAttribute("data-testid", "cal-title");
+        title.setAttribute("aria-live", "polite");
+        const next = document.createElement("button");
+        next.type = "button";
+        next.className = "cal-nav";
+        next.setAttribute("data-testid", "cal-next");
+        next.setAttribute("aria-label", "다음 달");
+        next.textContent = "\u25B6";
+        head.append(prev, title, next);
+        const viewport = document.createElement("div");
+        viewport.className = "cal-viewport";
+        const grid = document.createElement("div");
+        grid.className = "cal-grid";
+        grid.setAttribute("data-testid", "cal-grid");
+        ["일", "월", "화", "수", "목", "금", "토"].forEach((name, dow) => {
+          const dowEl = document.createElement("div");
+          dowEl.className = "cal-dow";
+          dowEl.setAttribute("data-dow", String(dow));
+          dowEl.textContent = name;
+          grid.appendChild(dowEl);
+        });
+        for (let i = 0; i < 42; i += 1) {
+          const cell = document.createElement("div");
+          cell.className = "cal-day";
+          grid.appendChild(cell);
+          state.cells.push(cell);
+        }
+        viewport.appendChild(grid);
+        wrap.append(head, viewport);
+        panel.appendChild(wrap);
+
+        const paintToday = () => {
+          const todayKey = keyOf(new Date());
+          state.cells.forEach((cell) => {
+            if (cell.getAttribute("data-date") === todayKey) cell.setAttribute("data-today", "true");
+            else cell.removeAttribute("data-today");
+          });
+        };
+        const render = () => {
+          title.textContent = `${state.year}년 ${state.month + 1}월`;
+          const offset = dateAt(state.year, state.month, 1).getDay();
+          state.cells.forEach((cell, i) => {
+            const d = dateAt(state.year, state.month, 1 - offset + i);
+            const key = keyOf(d);
+            cell.setAttribute("data-testid", `cal-day-${key}`);
+            cell.setAttribute("data-date", key);
+            cell.setAttribute("data-dow", String(d.getDay()));
+            if (d.getMonth() === state.month) cell.removeAttribute("data-other-month");
+            else cell.setAttribute("data-other-month", "true");
+            cell.textContent = String(d.getDate());
+          });
+          paintToday();
+        };
+        const go = (delta) => {
+          const d = dateAt(state.year, state.month + delta, 1);
+          state.year = d.getFullYear();
+          state.month = d.getMonth();
+          render();
+          // 연타 안전: 상태는 즉시 바꾸고, 애니 클래스를 뗐다가 reflow 뒤 다시 붙인다.
+          window.clearTimeout(state.slideTimer);
+          grid.classList.remove("cal-slide-next", "cal-slide-prev");
+          void grid.offsetWidth;
+          grid.classList.add(delta > 0 ? "cal-slide-next" : "cal-slide-prev");
+          state.slideTimer = window.setTimeout(() => grid.classList.remove("cal-slide-next", "cal-slide-prev"), 320);
+        };
+        prev.addEventListener("click", () => go(-1));
+        next.addEventListener("click", () => go(1));
+
+        // 오늘 표시 갱신: 다음 현지 자정 + 1초 타이머 1개, 앱으로 돌아올 때(visibilitychange·focus)도 다시 계산(보던 달은 유지).
+        const scheduleMidnight = () => {
+          window.clearTimeout(state.timer);
+          const n = new Date();
+          const midnight = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1, 0, 0, 0, 0);
+          state.timer = window.setTimeout(() => {
+            paintToday();
+            scheduleMidnight();
+          }, Math.max(1000, midnight.getTime() - n.getTime() + 1000));
+        };
+        const refreshToday = () => {
+          if (document.visibilityState === "hidden") return;
+          paintToday();
+          scheduleMidnight();
+        };
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") refreshToday();
+        });
+        window.addEventListener("focus", refreshToday);
+        render();
+        scheduleMidnight();
+      }
+
       function setupBottomNav() {
         const tabs = {
           timetable: { btn: document.getElementById("tabTimetableBtn"), panel: document.getElementById("tabPanelTimetable") },
@@ -6929,11 +7175,17 @@
         let savedScrollY = 0;
         let enterTimer = 0;
         const select = (name) => {
+          // 열린 팝업·모달이 있으면 전환하지 않는다(키보드 ←→ 포함).
+          if (document.querySelector(NAV_BLOCKING_POPUPS)) return;
           if (name === current) return;
           // 사용법 보기·질문으로 설정하기 진행 중에는 전환하지 않는다.
           if (quizTutorialIndex >= 0 || document.body.classList.contains("tutorial-active")) return;
           window.clearTimeout(enterTimer);
-          if (current === "timetable") savedScrollY = window.scrollY;
+          if (current === "timetable") {
+            savedScrollY = window.scrollY;
+            setThemeOptionsOpen(false);
+          }
+          if (name === "calendar") ensureCalendar(tabs.calendar.panel);
           const prev = tabs[current];
           const next = tabs[name];
           prev.panel.hidden = true;
