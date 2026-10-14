@@ -863,6 +863,31 @@
         opacity: 0.78;
       }
 
+      /* 요일 전체 해제(휴일): × 대신 작은 '휴일' 글자, 기존 휴일 처리색(--danger-*)을 흐리게 섞어 씀(opacity 로 흐리게 하지 않음). */
+      .period-cell[data-holiday="true"] {
+        background: color-mix(in srgb, var(--danger-bg) 60%, var(--card));
+        border-style: solid;
+        color: var(--danger-text);
+        font-size: 0.6rem;
+        font-weight: 800;
+        opacity: 1;
+      }
+
+      .period-cell[data-holiday="true"][data-extra="true"] {
+        opacity: 0.4;
+      }
+
+      /* 해제 연출: 위에서 아래로 한 칸씩(0.05초 간격, JS 가 순서대로 붙임) 0.2초 흐려지며 작아졌다가 ✕ 로 바뀐다. */
+      .period-cell[data-fading="true"] {
+        opacity: 0.2;
+        transform: scale(0.9);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .period-cell[data-fading="true"] { transition: none; }
+      }
+
       .controls {
         display: flex;
         justify-content: center;
@@ -3705,9 +3730,11 @@
         grid.querySelectorAll(".period-cell").forEach((cell) => {
           const row = Number(cell.getAttribute("data-row"));
           const day = cell.getAttribute("data-day");
-          const on = periodOn[day].has(row) && !holidayDays.has(day);
+          const holiday = holidayDays.has(day);
+          const on = (periodOn[day].has(row) && !holiday) || periodReleasing.has(`${day}-${row}`);
           cell.setAttribute("aria-pressed", on ? "true" : "false");
-          cell.textContent = on ? String(row) : "✕";
+          cell.textContent = on ? String(row) : holiday ? "휴일" : "✕";
+          setFlag(cell, "data-holiday", !on && holiday);
           const extra = periodExtraOpen && row > maxPeriodCount;
           cell.disabled = extra || row > visible;
           setFlag(cell, "data-extra", extra);
@@ -3715,27 +3742,55 @@
         });
       }
 
+      // 해제 연출 중인 칸("요일-교시")은 데이터상 꺼졌어도 연출이 끝날 때까지 켜진 모양으로 둔다. 최종 화면은 항상 데이터(periodOn)를 따른다.
+      const periodReleasing = new Set();
+
+      // 칸 누르기. 켜진 칸을 끄면 그 요일의 그 교시 이후를 모두 끄고, 꺼진 칸을 켜면 그 요일의 켜진 마지막 교시+1 부터 누른 칸까지 한꺼번에 켠다
+      // (결과는 항상 1교시부터 이어진 구간). 요일이 전부 꺼지면 휴일, 휴일 요일 칸을 누르면 휴일을 풀고 1~누른 교시를 켠다.
       function togglePeriodCell(day, period) {
-        if (holidayDays.has(day)) {
-          holidayDays.delete(day);
-          periodOn[day].add(period);
-          renderHolidayToggleRow();
-        } else if (periodOn[day].has(period)) {
-          periodOn[day].delete(period);
-          clearDisabledPeriodEntries(day, period);
+        ["", ...Array.from({ length: MAX_PERIOD_LIMIT }, (_, i) => String(i + 1))].forEach((n) => periodReleasing.delete(`${day}-${n}`));
+        const wasHoliday = holidayDays.has(day);
+        const released = [];
+        if (!wasHoliday && periodOn[day].has(period)) {
+          for (let p = period; p <= MAX_PERIOD_LIMIT; p += 1) {
+            if (periodOn[day].delete(p)) released.push(p);
+          }
           if (!periodOn[day].size) {
             holidayDays.add(day);
             clearHolidayEntriesForDay(day);
             renderHolidayToggleRow();
           }
         } else {
-          periodOn[day].add(period);
+          if (wasHoliday) {
+            holidayDays.delete(day);
+            periodOn[day].clear();
+            renderHolidayToggleRow();
+          }
+          let last = 0;
+          periodOn[day].forEach((p) => { if (p > last) last = p; });
+          for (let p = Math.min(last + 1, period); p <= period; p += 1) periodOn[day].add(p);
         }
         updateMaxPeriodCount();
         savePeriodGrid();
         syncPeriodStash();
+        const animate = released.length && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (animate) released.forEach((p) => periodReleasing.add(`${day}-${p}`));
         renderPeriodGrid();
         renderTimetables();
+        if (animate) {
+          released.forEach((p, i) => {
+            window.setTimeout(() => {
+              const cell = document.querySelector(`#periodGrid [data-testid="pg-${day}-${p}"]`);
+              if (cell && periodReleasing.has(`${day}-${p}`)) cell.setAttribute("data-fading", "true");
+            }, i * 50);
+            window.setTimeout(() => {
+              if (!periodReleasing.delete(`${day}-${p}`)) return;
+              syncPeriodGrid();
+              const cell = document.querySelector(`#periodGrid [data-testid="pg-${day}-${p}"]`);
+              if (cell) cell.removeAttribute("data-fading");
+            }, i * 50 + 200);
+          });
+        }
       }
 
       // 팝업을 열고 닫을 때·질문형이 격자를 옮길 때 반투명 행을 숨긴다.
