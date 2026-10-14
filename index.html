@@ -106,16 +106,16 @@
         --subj-16-fg: #1B2F7E;
         --subj-17-bg: #9BCEE5;
         --subj-17-fg: #1B1B7E;
-        --colh-1-bg: #CAA391;
-        --colh-1-fg: #632A18;
-        --colh-2-bg: #BEAB79;
-        --colh-2-fg: #4E3A06;
-        --colh-3-bg: #7CB15D;
-        --colh-3-fg: #1D3C13;
-        --colh-4-bg: #839EC3;
-        --colh-4-fg: #13304F;
-        --colh-5-bg: #B8A2D2;
-        --colh-5-fg: #3F2D7C;
+        --pcol-1-bg: #FFF4EE;
+        --pcol-1-fg: #893922;
+        --pcol-2-bg: #FFF6DD;
+        --pcol-2-fg: #79590A;
+        --pcol-3-bg: #EFF9EA;
+        --pcol-3-fg: #2E5D1E;
+        --pcol-4-bg: #F1F7FF;
+        --pcol-4-fg: #1F4D7F;
+        --pcol-5-bg: #F9F4FF;
+        --pcol-5-fg: #4A3493;
       }
 
       html[data-theme="forest"] {
@@ -187,16 +187,16 @@
         --subj-16-fg: #1B1B7E;
         --subj-17-bg: #D0C4BD;
         --subj-17-fg: #693B18;
-        --colh-1-bg: #B9996E;
-        --colh-1-fg: #472B11;
-        --colh-2-bg: #B4AA64;
-        --colh-2-fg: #42380C;
-        --colh-3-bg: #88B86B;
-        --colh-3-fg: #204215;
-        --colh-4-bg: #6EA9B9;
-        --colh-4-fg: #163645;
-        --colh-5-bg: #CC94CC;
-        --colh-5-fg: #482E48;
+        --pcol-1-bg: #FCF6EE;
+        --pcol-1-fg: #79491E;
+        --pcol-2-bg: #F8F7EB;
+        --pcol-2-fg: #6A5914;
+        --pcol-3-bg: #F2F9EE;
+        --pcol-3-fg: #2E5D1E;
+        --pcol-4-bg: #F0F8FA;
+        --pcol-4-fg: #245972;
+        --pcol-5-bg: #F8F5F8;
+        --pcol-5-fg: #5A3A5A;
       }
 
       html[data-theme="space"] {
@@ -268,16 +268,16 @@
         --subj-16-fg: #7B1B7E;
         --subj-17-bg: #E6BDB7;
         --subj-17-fg: #2B1B7E;
-        --colh-1-bg: #C5879F;
-        --colh-1-fg: #531231;
-        --colh-2-bg: #BBA372;
-        --colh-2-fg: #4D3200;
-        --colh-3-bg: #50A596;
-        --colh-3-fg: #06312B;
-        --colh-4-bg: #A5ACD4;
-        --colh-4-fg: #283390;
-        --colh-5-bg: #B9A5D4;
-        --colh-5-fg: #4F2587;
+        --pcol-1-bg: #FFF3F7;
+        --pcol-1-fg: #8E1F54;
+        --pcol-2-bg: #FFF5E1;
+        --pcol-2-fg: #7F5300;
+        --pcol-3-bg: #E8FAF6;
+        --pcol-3-fg: #0E6A5D;
+        --pcol-4-bg: #F4F6FF;
+        --pcol-4-fg: #2B3597;
+        --pcol-5-bg: #F9F4FF;
+        --pcol-5-fg: #592A97;
       }
 
       * {
@@ -774,6 +774,18 @@
         cursor: default;
       }
 
+      /* 시간대 팝업 격자의 요일 열 색(요일 머리칸·켜진 칸만. 마지막 교시 행·흐린 행·꺼진 칸·휴일 열은 그대로) */
+      .period-grid-head[data-day="월"] { background: var(--pcol-1-bg); color: var(--pcol-1-fg); border-radius: 6px; }
+      .period-cell[aria-pressed="true"][data-day="월"]:not([data-lastrow="true"]):not([data-extra="true"]) { background: var(--pcol-1-bg); color: var(--pcol-1-fg); }
+      .period-grid-head[data-day="화"] { background: var(--pcol-2-bg); color: var(--pcol-2-fg); border-radius: 6px; }
+      .period-cell[aria-pressed="true"][data-day="화"]:not([data-lastrow="true"]):not([data-extra="true"]) { background: var(--pcol-2-bg); color: var(--pcol-2-fg); }
+      .period-grid-head[data-day="수"] { background: var(--pcol-3-bg); color: var(--pcol-3-fg); border-radius: 6px; }
+      .period-cell[aria-pressed="true"][data-day="수"]:not([data-lastrow="true"]):not([data-extra="true"]) { background: var(--pcol-3-bg); color: var(--pcol-3-fg); }
+      .period-grid-head[data-day="목"] { background: var(--pcol-4-bg); color: var(--pcol-4-fg); border-radius: 6px; }
+      .period-cell[aria-pressed="true"][data-day="목"]:not([data-lastrow="true"]):not([data-extra="true"]) { background: var(--pcol-4-bg); color: var(--pcol-4-fg); }
+      .period-grid-head[data-day="금"] { background: var(--pcol-5-bg); color: var(--pcol-5-fg); border-radius: 6px; }
+      .period-cell[aria-pressed="true"][data-day="금"]:not([data-lastrow="true"]):not([data-extra="true"]) { background: var(--pcol-5-bg); color: var(--pcol-5-fg); }
+
       .period-cell[data-lastrow="true"] {
         border: 2px solid var(--theme-main-strong);
         border-style: solid;
@@ -987,18 +999,6 @@
         font-weight: 700;
       }
 
-      /* 요일 열 색: 빈 칸은 배경을 그대로 두고 위쪽 3px 띠(inset 그림자라 크기 변화 없음)만 --colh-N 으로 입힌다.
-         과목이 든 칸(인라인 배경·data-cell-subject)·휴일·꺼진 칸은 띠가 없다. 요일 머리칸은 중간 톤 --colh-N. */
-      td[data-day="월"]:not([data-cell-subject]):not(.disabled-slot):not(.holiday-slot):not([style*="background"]) { box-shadow: inset 0 3px 0 var(--colh-1-bg); }
-      td[data-day="화"]:not([data-cell-subject]):not(.disabled-slot):not(.holiday-slot):not([style*="background"]) { box-shadow: inset 0 3px 0 var(--colh-2-bg); }
-      td[data-day="수"]:not([data-cell-subject]):not(.disabled-slot):not(.holiday-slot):not([style*="background"]) { box-shadow: inset 0 3px 0 var(--colh-3-bg); }
-      td[data-day="목"]:not([data-cell-subject]):not(.disabled-slot):not(.holiday-slot):not([style*="background"]) { box-shadow: inset 0 3px 0 var(--colh-4-bg); }
-      td[data-day="금"]:not([data-cell-subject]):not(.disabled-slot):not(.holiday-slot):not([style*="background"]) { box-shadow: inset 0 3px 0 var(--colh-5-bg); }
-      thead th[data-day="월"] { background: var(--colh-1-bg); color: var(--colh-1-fg); }
-      thead th[data-day="화"] { background: var(--colh-2-bg); color: var(--colh-2-fg); }
-      thead th[data-day="수"] { background: var(--colh-3-bg); color: var(--colh-3-fg); }
-      thead th[data-day="목"] { background: var(--colh-4-bg); color: var(--colh-4-fg); }
-      thead th[data-day="금"] { background: var(--colh-5-bg); color: var(--colh-5-fg); }
 
       .period-col {
         width: 62px;
@@ -3377,6 +3377,7 @@
           const head = document.createElement("div");
           head.className = "period-grid-head";
           head.textContent = day;
+          if (!holidayDays.has(day)) head.setAttribute("data-day", day);
           grid.appendChild(head);
         });
         const rows = periodExtraOpen ? MAX_PERIOD_LIMIT : visiblePeriodRows();
@@ -4157,7 +4158,6 @@
           days.forEach((day) => {
             const th = document.createElement("th");
             th.textContent = day;
-            if (!holidayDays.has(day)) th.dataset.day = day;
             headerRow.appendChild(th);
           });
           thead.appendChild(headerRow);
@@ -4173,7 +4173,6 @@
 
             days.forEach((day) => {
               const td = document.createElement("td");
-              td.dataset.day = day;
               const matchedEntries = [];
               const isDisabled = isDisabledSlot(day, period);
 
@@ -5055,7 +5054,6 @@
           const th = document.createElement("th");
           th.scope = "col";
           th.textContent = day;
-          if (!holidayDays.has(day)) th.dataset.day = day;
           headerRow.appendChild(th);
         });
 
