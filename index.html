@@ -116,6 +116,16 @@
         --pcol-4-fg: #1F4D7F;
         --pcol-5-bg: #F9F4FF;
         --pcol-5-fg: #4A3493;
+        --pcolh-1-bg: #6B4033;
+        --pcolh-1-fg: #FFFFFF;
+        --pcolh-2-bg: #978149;
+        --pcolh-2-fg: #1A1A1A;
+        --pcolh-3-bg: #67A951;
+        --pcolh-3-fg: #1A1A1A;
+        --pcolh-4-bg: #648BB4;
+        --pcolh-4-fg: #1A1A1A;
+        --pcolh-5-bg: #7764B4;
+        --pcolh-5-fg: #FFFFFF;
       }
 
       html[data-theme="forest"] {
@@ -197,6 +207,16 @@
         --pcol-4-fg: #245972;
         --pcol-5-bg: #F8F5F8;
         --pcol-5-fg: #5A3A5A;
+        --pcolh-1-bg: #B38761;
+        --pcolh-1-fg: #1A1A1A;
+        --pcolh-2-bg: #A2914E;
+        --pcolh-2-fg: #1A1A1A;
+        --pcolh-3-bg: #6DAE56;
+        --pcolh-3-fg: #1A1A1A;
+        --pcolh-4-bg: #5A94AF;
+        --pcolh-4-fg: #1A1A1A;
+        --pcolh-5-bg: #A951A9;
+        --pcolh-5-fg: #FFFFFF;
       }
 
       html[data-theme="space"] {
@@ -278,6 +298,16 @@
         --pcol-4-fg: #2B3597;
         --pcol-5-bg: #F9F4FF;
         --pcol-5-fg: #592A97;
+        --pcolh-1-bg: #AE5680;
+        --pcolh-1-fg: #FFFFFF;
+        --pcolh-2-bg: #A2854E;
+        --pcolh-2-fg: #1A1A1A;
+        --pcolh-3-bg: #4B9B90;
+        --pcolh-3-fg: #1A1A1A;
+        --pcolh-4-bg: #292E56;
+        --pcolh-4-fg: #FFFFFF;
+        --pcolh-5-bg: #381565;
+        --pcolh-5-fg: #FFFFFF;
       }
 
       * {
@@ -775,15 +805,15 @@
       }
 
       /* 시간대 팝업 격자의 요일 열 색(요일 머리칸·켜진 칸만. 마지막 교시 행·흐린 행·꺼진 칸·휴일 열은 그대로) */
-      .period-grid-head[data-day="월"] { background: var(--pcol-1-bg); color: var(--pcol-1-fg); border-radius: 6px; }
+      .period-grid-head[data-day="월"] { background: var(--pcolh-1-bg); color: var(--pcolh-1-fg); border-radius: 6px; }
       .period-cell[aria-pressed="true"][data-day="월"]:not([data-lastrow="true"]):not([data-extra="true"]) { background: var(--pcol-1-bg); color: var(--pcol-1-fg); }
-      .period-grid-head[data-day="화"] { background: var(--pcol-2-bg); color: var(--pcol-2-fg); border-radius: 6px; }
+      .period-grid-head[data-day="화"] { background: var(--pcolh-2-bg); color: var(--pcolh-2-fg); border-radius: 6px; }
       .period-cell[aria-pressed="true"][data-day="화"]:not([data-lastrow="true"]):not([data-extra="true"]) { background: var(--pcol-2-bg); color: var(--pcol-2-fg); }
-      .period-grid-head[data-day="수"] { background: var(--pcol-3-bg); color: var(--pcol-3-fg); border-radius: 6px; }
+      .period-grid-head[data-day="수"] { background: var(--pcolh-3-bg); color: var(--pcolh-3-fg); border-radius: 6px; }
       .period-cell[aria-pressed="true"][data-day="수"]:not([data-lastrow="true"]):not([data-extra="true"]) { background: var(--pcol-3-bg); color: var(--pcol-3-fg); }
-      .period-grid-head[data-day="목"] { background: var(--pcol-4-bg); color: var(--pcol-4-fg); border-radius: 6px; }
+      .period-grid-head[data-day="목"] { background: var(--pcolh-4-bg); color: var(--pcolh-4-fg); border-radius: 6px; }
       .period-cell[aria-pressed="true"][data-day="목"]:not([data-lastrow="true"]):not([data-extra="true"]) { background: var(--pcol-4-bg); color: var(--pcol-4-fg); }
-      .period-grid-head[data-day="금"] { background: var(--pcol-5-bg); color: var(--pcol-5-fg); border-radius: 6px; }
+      .period-grid-head[data-day="금"] { background: var(--pcolh-5-bg); color: var(--pcolh-5-fg); border-radius: 6px; }
       .period-cell[aria-pressed="true"][data-day="금"]:not([data-lastrow="true"]):not([data-extra="true"]) { background: var(--pcol-5-bg); color: var(--pcol-5-fg); }
 
       .period-cell[data-lastrow="true"] {
